@@ -1,267 +1,329 @@
-flowchart TB
+```mermaid
+classDiagram
 
-    %% =====================================================
-    %% TEST LAYER
-    %% =====================================================
-    subgraph TEST["2. TEST LAYER - TestNG"]
-        LoginTest["LoginTest.java<br/><br/>
-        @BeforeMethod<br/>
-        @Test<br/>
-        @DataProvider<br/>
-        Assertions<br/>
-        Test execution"]
+%% =========================
+%% TEST / POM
+%% =========================
 
-        DashboardTest["DashboardTest.java"]
-        ShipmentTest["ShipmentTest.java"]
-    end
+class TestBase {
+    -Configuration config
+    -long startTime
+    -long endTime
+    +beforeAll(...)
+    +afterAll()
+}
 
-    %% =====================================================
-    %% PAGE OBJECT LAYER
-    %% =====================================================
-    subgraph PAGE["3. PAGE OBJECT LAYER"]
-        
-        BasePage["BasePage.java<br/><br/>
-        click()<br/>
-        type()<br/>
-        getText()<br/>
-        waitForVisible()<br/>
-        isDisplayed()"]
+class BasePage {
+    <<abstract>>
+    +selectCustomer(String)
+    +selectCustomer(String, boolean)
+}
 
-        LoginPage["LoginPage.java<br/><br/>
-        login()<br/>
-        enterUsername()<br/>
-        enterPassword()<br/>
-        clickLogin()<br/>
-        getLoginError()"]
+class LoginPage {
+    -Element usernameTextBox
+    -Element passwordTextBox
+    -Element loginButton
+    +login(String username, String password)
+    +enterUsername(String)
+    +enterPassword(String)
+    +clickLogin()
+    +isLoginButtonDisplayed() boolean
+}
 
-        DashboardPage["DashboardPage.java<br/><br/>
-        isDashboardDisplayed()<br/>
-        getWelcomeText()<br/>
-        clickLogout()<br/>
-        openShipmentMenu()"]
+TestBase --> ConfigLoader : uses
+TestBase --> DriverRunner : uses
 
-        ShipmentPage["ShipmentPage.java<br/><br/>
-        searchShipment()<br/>
-        selectShipment()<br/>
-        getShipmentStatus()"]
-    end
-
-    %% =====================================================
-    %% UTILITY LAYER
-    %% =====================================================
-    subgraph UTIL["4. UTILITY / ACTION LAYER"]
-
-        WebUtils["WebUtils.java<br/><br/>
-        click()<br/>
-        type()<br/>
-        clear()<br/>
-        getText()<br/>
-        isDisplayed()<br/>
-        scrollToElement()"]
-
-        WaitUtils["WaitUtils.java<br/><br/>
-        waitForVisibility()<br/>
-        waitForClickable()<br/>
-        waitForText()<br/>
-        fluentWait()"]
-
-        JsUtils["JsUtils.java<br/><br/>
-        clickByJS()<br/>
-        scrollIntoView()<br/>
-        executeScript()"]
-
-        ScreenshotUtils["ScreenshotUtils.java<br/><br/>
-        takeScreenshot()<br/>
-        takeFullPageScreenshot()"]
-
-        DateUtils["DateUtils.java<br/><br/>
-        getCurrentDate()<br/>
-        addDays()<br/>
-        formatDate()"]
-
-        FileUtils["FileUtils / ExcelUtils.java<br/><br/>
-        readFile()<br/>
-        writeFile()<br/>
-        getCellData()"]
-    end
-
-    %% =====================================================
-    %% INFRASTRUCTURE
-    %% =====================================================
-    subgraph INFRA["5. INFRASTRUCTURE LAYER"]
-
-        DriverFactory["DriverFactory.java<br/><br/>
-        createDriver()<br/>
-        createChromeDriver()<br/>
-        createFirefoxDriver()"]
-
-        DriverManager["DriverManager.java<br/><br/>
-        getDriver()<br/>
-        quitDriver()<br/>
-        removeDriver()<br/><br/>
-        ThreadLocal<WebDriver>"]
-
-        ConfigReader["ConfigReader.java<br/><br/>
-        getString()<br/>
-        getInt()<br/>
-        getBoolean()<br/>
-        getList()"]
-
-        PageFactoryManager["PageFactoryManager.java<br/><br/>
-        initElements()<br/>
-        initialize(Page)"]
-
-        TestListener["TestListener.java<br/><br/>
-        beforeTest()<br/>
-        afterMethod()<br/>
-        onTestFailure()<br/>
-        onTestSuccess()"]
-    end
-
-    %% =====================================================
-    %% SELENIUM
-    %% =====================================================
-    subgraph SELENIUM["6. SELENIUM WEBDRIVER LAYER"]
-
-        WebDriver["Selenium WebDriver"]
-
-        Chrome["ChromeDriver"]
-        Firefox["FirefoxDriver"]
-        Edge["EdgeDriver"]
-    end
-
-    %% =====================================================
-    %% BROWSER / APPLICATION
-    %% =====================================================
-    subgraph APP["7. BROWSER & APPLICATION"]
-
-        Browser["Web Browser"]
-
-        WebApp["Web Application<br/><br/>
-        Login<br/>
-        Dashboard<br/>
-        Shipment<br/>
-        Other Modules"]
-    end
-
-    %% =====================================================
-    %% TEST DATA / CONFIG / REPORTING
-    %% =====================================================
-    subgraph EXTERNAL["EXTERNAL INTEGRATIONS"]
-
-        TestData["Test Data<br/><br/>
-        Excel<br/>
-        CSV<br/>
-        JSON"]
-
-        Config["Configuration<br/><br/>
-        config.properties<br/>
-        Environment Config"]
-
-        Reporting["Reporting<br/><br/>
-        Allure<br/>
-        ExtentReports"]
-
-        Logging["Logging<br/><br/>
-        Log4j2"]
-
-        CICD["CI/CD<br/><br/>
-        Jenkins<br/>
-        GitLab CI"]
-
-        DBAPI["Database / API<br/><br/>
-        JDBC<br/>
-        REST Assured"]
-    end
-
-    %% =====================================================
-    %% MAIN FLOW
-    %% =====================================================
-
-    LoginTest --> LoginPage
-    DashboardTest --> DashboardPage
-    ShipmentTest --> ShipmentPage
-
-    %% Page inheritance
-    LoginPage -->|extends| BasePage
-    DashboardPage -->|extends| BasePage
-    ShipmentPage -->|extends| BasePage
-
-    %% Page to utility
-    BasePage --> WebUtils
-    BasePage --> WaitUtils
-
-    LoginPage --> WebUtils
-    LoginPage --> WaitUtils
-
-    DashboardPage --> WebUtils
-    DashboardPage --> WaitUtils
-
-    ShipmentPage --> WebUtils
-    ShipmentPage --> WaitUtils
-
-    %% Utility to infrastructure / driver
-    WebUtils --> WebDriver
-    WaitUtils --> WebDriver
-    JsUtils --> WebDriver
-    ScreenshotUtils --> WebDriver
-
-    %% Infrastructure
-    DriverFactory --> DriverManager
-    DriverManager --> WebDriver
-
-    ConfigReader --> DriverFactory
-    PageFactoryManager --> LoginPage
-    PageFactoryManager --> DashboardPage
-    PageFactoryManager --> ShipmentPage
-
-    %% Selenium
-    WebDriver --> Chrome
-    WebDriver --> Firefox
-    WebDriver --> Edge
-
-    Chrome --> Browser
-    Firefox --> Browser
-    Edge --> Browser
-
-    Browser --> WebApp
-
-    %% Test listener
-    TestListener -.-> LoginTest
-    TestListener -.-> DashboardTest
-    TestListener -.-> ShipmentTest
-
-    %% External integrations
-    TestData -.-> LoginTest
-    TestData -.-> ShipmentTest
-
-    Config -.-> ConfigReader
-
-    TestListener --> Reporting
-    TestListener --> ScreenshotUtils
-    TestListener --> Logging
-
-    CICD --> LoginTest
-    DBAPI -.-> LoginTest
-    DBAPI -.-> ShipmentTest
+LoginPage --|> BasePage
+LoginPage --> Element : uses
 
 
-    %% =====================================================
-    %% STYLING
-    %% =====================================================
+%% =========================
+%% ELEMENT
+%% =========================
 
-    classDef test fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
-    classDef page fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
-    classDef util fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px
-    classDef infra fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px
-    classDef selenium fill:#E0F7FA,stroke:#00838F,stroke-width:2px
-    classDef app fill:#ECEFF1,stroke:#37474F,stroke-width:2px
-    classDef external fill:#FFF8E1,stroke:#F9A825,stroke-width:2px
+class BaseElement {
+    <<abstract>>
+    -String locator
+    -By by
+    -BaseElement parent
+    -WebElement element
+    -WebElement elementIntractable
+    -boolean alwaysFind
 
-    class LoginTest,DashboardTest,ShipmentTest test
-    class BasePage,LoginPage,DashboardPage,ShipmentPage page
-    class WebUtils,WaitUtils,JsUtils,ScreenshotUtils,DateUtils,FileUtils util
-    class DriverFactory,DriverManager,ConfigReader,PageFactoryManager,TestListener infra
-    class WebDriver,Chrome,Firefox,Edge selenium
-    class Browser,WebApp app
-    class TestData,Config,Reporting,Logging,CICD,DBAPI external
+    +element() WebElement
+    +click()
+    +enter(CharSequence...)
+    +clear()
+    +getText() String
+    +getAttribute(String) String
+    +isDisplayed() boolean
+    +exists() boolean
+    +waitForExist()
+    +waitForClickable()
+    +waitForVisible()
+}
+
+class Element {
+    +Element(String locator)
+    +Element(By by)
+}
+
+Element --|> BaseElement
+
+
+%% =========================
+%% WAIT
+%% =========================
+
+class SeleniumWait {
+    <<extends FluentWait~WebDriver~>>
+    +SeleniumWait(WebDriver, long timeout, long pollingInterval)
+}
+
+BaseElement --> SeleniumWait : uses
+SeleniumWait --> WebDriver : waits on
+
+
+%% =========================
+%% DRIVER
+%% =========================
+
+class DriverRunner {
+    <<Facade>>
+    +open(String url)
+    +open()
+    +openMobile(Configuration)
+    +setConfig(Configuration)
+    +switchToMobile()
+    +switchToWeb()
+    +closeWebDriver()
+    +refresh()
+    +getWebDriver() WebDriver
+    +driver() Driver
+    +config() Configuration
+    +Wait() SeleniumWait
+    +actions() Actions
+}
+
+class DriverContainer {
+    -Map~Long, Driver~ threadDriver
+    -Map~Long, Driver~ threadMobileDriver
+    -Map~Long, Configuration~ threadConfig
+    -boolean isMobile
+
+    +open(String url)
+    +open()
+    +openMobile(Configuration)
+    +switchToMobile()
+    +switchToBrowser()
+    +closeWebDriver()
+    +getWebDriver() WebDriver
+    +config() Configuration
+    +Wait() SeleniumWait
+}
+
+class Driver {
+    <<interface>>
+    +config() Configuration
+    +config(Configuration)
+    +platform() PlatformInfo
+    +hasWebDriverStarted() boolean
+    +getWebDriver() WebDriver
+    +getAppiumDriver() AppiumDriver
+    +getAndCheckWebDriver() WebDriver
+    +create() WebDriver
+    +isAlive() boolean
+    +setWebDriver(WebDriver)
+    +close()
+    +executeJavaScript(...)
+    +clearCookies()
+    +getUserAgent() String
+    +source() String
+    +url() String
+    +switchTo()
+    +actions() Actions
+}
+
+class LazyDriver {
+    -Configuration config
+    -PlatformInfo platform
+    -WebDriverFactory factory
+    -WebDriver webDriver
+
+    +getWebDriver() WebDriver
+    +getAndCheckWebDriver() WebDriver
+    +create() WebDriver
+    +isAlive() boolean
+    +close()
+    +setWebDriver(WebDriver)
+}
+
+DriverRunner --> DriverContainer : delegates
+DriverContainer --> Driver : manages
+Driver <|.. LazyDriver
+LazyDriver --> WebDriverFactory : uses
+
+
+%% =========================
+%% FACTORY
+%% =========================
+
+class WebDriverFactory {
+    -Map~String, Class~ factories
+    +createWebDriver(Configuration) WebDriver
+    -findFactory(Platform) DriverFactory
+    -adjustBrowserSize(Configuration, WebDriver)
+}
+
+class DriverFactory {
+    <<interface>>
+    +create(Configuration) WebDriver
+}
+
+class AbstractDriverFactory {
+    <<abstract>>
+    +createCommonCapabilities(Configuration)
+    +transferCapabilitiesFromSystemProperties(...)
+    +convertToNearestObject(String) Object
+    +isInteger(String) boolean
+    +isBoolean(String) boolean
+}
+
+class ChromeDriverFactory {
+    +create(Configuration) WebDriver
+}
+
+class FirefoxDriverFactory {
+    +create(Configuration) WebDriver
+}
+
+class EdgeDriverFactory {
+    +create(Configuration) WebDriver
+}
+
+class SafariDriverFactory {
+    +create(Configuration) WebDriver
+}
+
+class AndroidDriverFactory {
+    +create(Configuration) WebDriver
+}
+
+class IOSDriverFactory {
+    +create(Configuration) WebDriver
+}
+
+WebDriverFactory --> DriverFactory : finds
+
+DriverFactory <|.. AbstractDriverFactory
+
+AbstractDriverFactory <|-- ChromeDriverFactory
+AbstractDriverFactory <|-- FirefoxDriverFactory
+AbstractDriverFactory <|-- EdgeDriverFactory
+AbstractDriverFactory <|-- SafariDriverFactory
+AbstractDriverFactory <|-- AndroidDriverFactory
+AbstractDriverFactory <|-- IOSDriverFactory
+
+WebDriverFactory --> Configuration
+
+
+%% =========================
+%% CONFIGURATION
+%% =========================
+
+class Configuration {
+    -String platform
+    -boolean headless
+    -String remote
+    -String browserSize
+    -String driverVersion
+    -boolean startMaximized
+    -String pageLoadStrategy
+    -MutableCapabilities capabilities
+    -String baseUrl
+    -long timeout
+    -long pollingInterval
+    -boolean clickViaJs
+
+    +isRemote() boolean
+    +isHeadless() boolean
+    +getTimeout() long
+    +getPollingInterval() long
+}
+
+class ConfigLoader {
+    +fromJsonFile(String) Configuration
+    +fromPropertyFile(String) Configuration
+    +updateConfiguration(Configuration) Configuration
+}
+
+ConfigLoader --> Configuration
+DriverRunner --> Configuration : sets
+DriverContainer --> Configuration : uses
+LazyDriver --> Configuration : uses
+
+
+%% =========================
+%% PLATFORM
+%% =========================
+
+class PlatformInfo {
+    -Platform platform
+    -boolean headless
+}
+
+LazyDriver --> PlatformInfo
+Configuration --> PlatformInfo : defines
+
+
+%% =========================
+%% SELENIUM / APPIUM
+%% =========================
+
+class WebDriver {
+    <<Selenium>>
+}
+
+class ChromeDriver {
+    <<Selenium>>
+}
+
+class FirefoxDriver {
+    <<Selenium>>
+}
+
+class EdgeDriver {
+    <<Selenium>>
+}
+
+class SafariDriver {
+    <<Selenium>>
+}
+
+class RemoteWebDriver {
+    <<Selenium>>
+}
+
+class AndroidDriver {
+    <<Appium>>
+}
+
+class IOSDriver {
+    <<Appium>>
+}
+
+ChromeDriver --|> WebDriver
+FirefoxDriver --|> WebDriver
+EdgeDriver --|> WebDriver
+SafariDriver --|> WebDriver
+RemoteWebDriver --|> WebDriver
+AndroidDriver --|> WebDriver
+IOSDriver --|> WebDriver
+
+ChromeDriverFactory --> ChromeDriver : creates
+FirefoxDriverFactory --> FirefoxDriver : creates
+EdgeDriverFactory --> EdgeDriver : creates
+SafariDriverFactory --> SafariDriver : creates
+AndroidDriverFactory --> AndroidDriver : creates
+IOSDriverFactory --> IOSDriver : creates
+```
