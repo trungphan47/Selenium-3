@@ -1,329 +1,226 @@
 ```mermaid
 classDiagram
+    direction TB
 
-%% =========================
-%% TEST / POM
-%% =========================
+    class TestBase {
+        +beforeAll()
+        +afterAll()
+        -Configuration config
+    }
 
-class TestBase {
-    -Configuration config
-    -long startTime
-    -long endTime
-    +beforeAll(...)
-    +afterAll()
-}
+    class LoginPage {
+        +login(username, password)
+        +enterUsername(username)
+        +enterPassword(password)
+        +clickLogin()
+        +isLoginSuccessful() boolean
+        -Element usernameTextBox
+        -Element passwordTextBox
+        -Element loginButton
+    }
 
-class BasePage {
-    <<abstract>>
-    +selectCustomer(String)
-    +selectCustomer(String, boolean)
-}
+    class BasePage {
+        <<abstract>>
+        +selectCustomer(customer)
+        +selectCustomer(customer, isIndividual)
+    }
 
-class LoginPage {
-    -Element usernameTextBox
-    -Element passwordTextBox
-    -Element loginButton
-    +login(String username, String password)
-    +enterUsername(String)
-    +enterPassword(String)
-    +clickLogin()
-    +isLoginButtonDisplayed() boolean
-}
+    class Element {
+        +Element(locator)
+        +click()
+        +enter(value)
+        +clear()
+        +getText() String
+        +isDisplayed() boolean
+        +waitForExist()
+        +waitForClickable()
+        +select(text)
+    }
 
-TestBase --> ConfigLoader : uses
-TestBase --> DriverRunner : uses
+    class BaseElement {
+        <<abstract>>
+        #String locator
+        #By by
+        #Driver driver
+        #WebElement element
+        +element() WebElement
+        +click()
+        +enter(value)
+        +clear()
+        +getText() String
+        +getAttribute(name) String
+        +isDisplayed() boolean
+        +waitForExist()
+        +waitForClickable()
+        +Wait() WebDriverWait
+    }
 
-LoginPage --|> BasePage
-LoginPage --> Element : uses
+    class DriverRunner {
+        <<Facade>>
+        +open(url)
+        +open()
+        +setConfig(config)
+        +closeWindow()
+        +closeWebDriver()
+        +refresh()
+        +title() String
+        +switchTo()
+        +Wait() SeleniumWait
+        +actions() Actions
+        +driver() Driver
+        +config() Configuration
+        +url() String
+        +source() String
+        +clearCookies()
+        +takeScreenShot()
+    }
 
+    class DriverContainer {
+        -Map threadDriver
+        -Map threadConfig
+        +open(url)
+        +open()
+        +setConfig(config)
+        +closeWindow()
+        +closeWebDriver()
+        +refresh()
+        +driver() Driver
+        +config() Configuration
+        +Wait() SeleniumWait
+    }
 
-%% =========================
-%% ELEMENT
-%% =========================
+    class Driver {
+        <<interface>>
+        +config() Configuration
+        +config(config)
+        +platform() PlatformInfo
+        +hasWebDriverStarted() boolean
+        +getWebDriver() WebDriver
+        +getAndCheckWebDriver() WebDriver
+        +create() WebDriver
+        +isAlive() boolean
+        +close()
+        +executeJavaScript()
+        +clearCookies()
+        +getUserAgent() String
+        +source() String
+        +url() String
+        +switchTo()
+        +actions() Actions
+    }
 
-class BaseElement {
-    <<abstract>>
-    -String locator
-    -By by
-    -BaseElement parent
-    -WebElement element
-    -WebElement elementIntractable
-    -boolean alwaysFind
+    class LazyDriver {
+        -Configuration config
+        -PlatformInfo platform
+        -WebDriver webDriver
+        -WebDriverFactory factory
+        +LazyDriver(config)
+        +config() Configuration
+        +platform() PlatformInfo
+        +getAndCheckWebDriver() WebDriver
+        +create() WebDriver
+        +getWebDriver() WebDriver
+        +setWebDriver(webDriver)
+        +isAlive() boolean
+        +close()
+    }
 
-    +element() WebElement
-    +click()
-    +enter(CharSequence...)
-    +clear()
-    +getText() String
-    +getAttribute(String) String
-    +isDisplayed() boolean
-    +exists() boolean
-    +waitForExist()
-    +waitForClickable()
-    +waitForVisible()
-}
+    class SeleniumWait {
+        +SeleniumWait(WebDriver, timeout, pollingInterval)
+    }
 
-class Element {
-    +Element(String locator)
-    +Element(By by)
-}
+    class WebDriverFactory {
+        +createWebDriver(config) WebDriver
+    }
 
-Element --|> BaseElement
+    class DriverFactory {
+        <<interface>>
+        +create(config) WebDriver
+    }
 
+    class AbstractDriverFactory {
+        <<abstract>>
+        +createCommonCapabilities(config) MutableCapabilities
+        #transferCapabilitiesFromSystemProperties()
+        #convertToNearestObject(value) Object
+        #isInteger(value) boolean
+        #isBoolean(value) boolean
+    }
 
-%% =========================
-%% WAIT
-%% =========================
+    class ChromeDriverFactory {
+        +create(config) WebDriver
+        #createChromeArguments() List
+    }
 
-class SeleniumWait {
-    <<extends FluentWait~WebDriver~>>
-    +SeleniumWait(WebDriver, long timeout, long pollingInterval)
-}
+    class FirefoxDriverFactory {
+        +create(config) WebDriver
+    }
 
-BaseElement --> SeleniumWait : uses
-SeleniumWait --> WebDriver : waits on
+    class EdgeDriverFactory {
+        +create(config) WebDriver
+    }
 
+    class SafariDriverFactory {
+        +create(config) WebDriver
+    }
 
-%% =========================
-%% DRIVER
-%% =========================
+    class Configuration {
+        -String platform
+        -boolean headless
+        -String remote
+        -String browserSize
+        -String driverVersion
+        -boolean startMaximized
+        -String pageLoadStrategy
+        -MutableCapabilities capabilities
+        -String baseUrl
+        -long timeout
+        -long pollingInterval
+        -boolean clickViaJs
+        -String chromeOptions
+        +isRemote() boolean
+        +isHeadless() boolean
+        +getCapabilities()
+        +getTimeout() long
+        +getPollingInterval() long
+    }
 
-class DriverRunner {
-    <<Facade>>
-    +open(String url)
-    +open()
-    +openMobile(Configuration)
-    +setConfig(Configuration)
-    +switchToMobile()
-    +switchToWeb()
-    +closeWebDriver()
-    +refresh()
-    +getWebDriver() WebDriver
-    +driver() Driver
-    +config() Configuration
-    +Wait() SeleniumWait
-    +actions() Actions
-}
+    class ConfigLoader {
+        +fromJsonFile(file) Configuration
+        +fromPropertyFile(file) Configuration
+        +updateConfiguration(config) Configuration
+    }
 
-class DriverContainer {
-    -Map~Long, Driver~ threadDriver
-    -Map~Long, Driver~ threadMobileDriver
-    -Map~Long, Configuration~ threadConfig
-    -boolean isMobile
+    TestBase --> ConfigLoader : loads
+    TestBase --> Configuration : configures
+    TestBase --> DriverRunner : starts
 
-    +open(String url)
-    +open()
-    +openMobile(Configuration)
-    +switchToMobile()
-    +switchToBrowser()
-    +closeWebDriver()
-    +getWebDriver() WebDriver
-    +config() Configuration
-    +Wait() SeleniumWait
-}
+    LoginPage --|> BasePage
+    BasePage --> Element : uses
+    Element --|> BaseElement
 
-class Driver {
-    <<interface>>
-    +config() Configuration
-    +config(Configuration)
-    +platform() PlatformInfo
-    +hasWebDriverStarted() boolean
-    +getWebDriver() WebDriver
-    +getAppiumDriver() AppiumDriver
-    +getAndCheckWebDriver() WebDriver
-    +create() WebDriver
-    +isAlive() boolean
-    +setWebDriver(WebDriver)
-    +close()
-    +executeJavaScript(...)
-    +clearCookies()
-    +getUserAgent() String
-    +source() String
-    +url() String
-    +switchTo()
-    +actions() Actions
-}
+    DriverRunner --> DriverContainer : delegates
+    DriverContainer --> Driver : manages
+    DriverContainer --> SeleniumWait : creates
 
-class LazyDriver {
-    -Configuration config
-    -PlatformInfo platform
-    -WebDriverFactory factory
-    -WebDriver webDriver
+    LazyDriver ..|> Driver
+    LazyDriver --> WebDriverFactory : uses
+    LazyDriver --> Configuration
+    LazyDriver --> PlatformInfo
 
-    +getWebDriver() WebDriver
-    +getAndCheckWebDriver() WebDriver
-    +create() WebDriver
-    +isAlive() boolean
-    +close()
-    +setWebDriver(WebDriver)
-}
+    WebDriverFactory --> DriverFactory : selects
 
-DriverRunner --> DriverContainer : delegates
-DriverContainer --> Driver : manages
-Driver <|.. LazyDriver
-LazyDriver --> WebDriverFactory : uses
+    ChromeDriverFactory --|> AbstractDriverFactory
+    FirefoxDriverFactory --|> AbstractDriverFactory
+    EdgeDriverFactory --|> AbstractDriverFactory
+    SafariDriverFactory --|> AbstractDriverFactory
 
+    AbstractDriverFactory ..|> DriverFactory
+    AbstractDriverFactory --> Configuration
 
-%% =========================
-%% FACTORY
-%% =========================
+    DriverRunner --> SeleniumWait : Wait()
+    BaseElement --> SeleniumWait : uses
+    SeleniumWait --> WebDriver : waits on
 
-class WebDriverFactory {
-    -Map~String, Class~ factories
-    +createWebDriver(Configuration) WebDriver
-    -findFactory(Platform) DriverFactory
-    -adjustBrowserSize(Configuration, WebDriver)
-}
-
-class DriverFactory {
-    <<interface>>
-    +create(Configuration) WebDriver
-}
-
-class AbstractDriverFactory {
-    <<abstract>>
-    +createCommonCapabilities(Configuration)
-    +transferCapabilitiesFromSystemProperties(...)
-    +convertToNearestObject(String) Object
-    +isInteger(String) boolean
-    +isBoolean(String) boolean
-}
-
-class ChromeDriverFactory {
-    +create(Configuration) WebDriver
-}
-
-class FirefoxDriverFactory {
-    +create(Configuration) WebDriver
-}
-
-class EdgeDriverFactory {
-    +create(Configuration) WebDriver
-}
-
-class SafariDriverFactory {
-    +create(Configuration) WebDriver
-}
-
-class AndroidDriverFactory {
-    +create(Configuration) WebDriver
-}
-
-class IOSDriverFactory {
-    +create(Configuration) WebDriver
-}
-
-WebDriverFactory --> DriverFactory : finds
-
-DriverFactory <|.. AbstractDriverFactory
-
-AbstractDriverFactory <|-- ChromeDriverFactory
-AbstractDriverFactory <|-- FirefoxDriverFactory
-AbstractDriverFactory <|-- EdgeDriverFactory
-AbstractDriverFactory <|-- SafariDriverFactory
-AbstractDriverFactory <|-- AndroidDriverFactory
-AbstractDriverFactory <|-- IOSDriverFactory
-
-WebDriverFactory --> Configuration
-
-
-%% =========================
-%% CONFIGURATION
-%% =========================
-
-class Configuration {
-    -String platform
-    -boolean headless
-    -String remote
-    -String browserSize
-    -String driverVersion
-    -boolean startMaximized
-    -String pageLoadStrategy
-    -MutableCapabilities capabilities
-    -String baseUrl
-    -long timeout
-    -long pollingInterval
-    -boolean clickViaJs
-
-    +isRemote() boolean
-    +isHeadless() boolean
-    +getTimeout() long
-    +getPollingInterval() long
-}
-
-class ConfigLoader {
-    +fromJsonFile(String) Configuration
-    +fromPropertyFile(String) Configuration
-    +updateConfiguration(Configuration) Configuration
-}
-
-ConfigLoader --> Configuration
-DriverRunner --> Configuration : sets
-DriverContainer --> Configuration : uses
-LazyDriver --> Configuration : uses
-
-
-%% =========================
-%% PLATFORM
-%% =========================
-
-class PlatformInfo {
-    -Platform platform
-    -boolean headless
-}
-
-LazyDriver --> PlatformInfo
-Configuration --> PlatformInfo : defines
-
-
-%% =========================
-%% SELENIUM / APPIUM
-%% =========================
-
-class WebDriver {
-    <<Selenium>>
-}
-
-class ChromeDriver {
-    <<Selenium>>
-}
-
-class FirefoxDriver {
-    <<Selenium>>
-}
-
-class EdgeDriver {
-    <<Selenium>>
-}
-
-class SafariDriver {
-    <<Selenium>>
-}
-
-class RemoteWebDriver {
-    <<Selenium>>
-}
-
-class AndroidDriver {
-    <<Appium>>
-}
-
-class IOSDriver {
-    <<Appium>>
-}
-
-ChromeDriver --|> WebDriver
-FirefoxDriver --|> WebDriver
-EdgeDriver --|> WebDriver
-SafariDriver --|> WebDriver
-RemoteWebDriver --|> WebDriver
-AndroidDriver --|> WebDriver
-IOSDriver --|> WebDriver
-
-ChromeDriverFactory --> ChromeDriver : creates
-FirefoxDriverFactory --> FirefoxDriver : creates
-EdgeDriverFactory --> EdgeDriver : creates
-SafariDriverFactory --> SafariDriver : creates
-AndroidDriverFactory --> AndroidDriver : creates
-IOSDriverFactory --> IOSDriver : creates
+    ConfigLoader --> Configuration : creates
 ```
