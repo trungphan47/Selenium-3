@@ -38,7 +38,6 @@ classDiagram
     }
 
     class BaseElement {
-        <<abstract>>
         #String locator
         #By by
         #Driver driver
@@ -50,9 +49,8 @@ classDiagram
         +getText() String
         +getAttribute(name) String
         +isDisplayed() boolean
-        +waitForExist()
-        +waitForClickable()
-        +Wait() WebDriverWait
+        +getValue()
+        +scrollToView()
     }
 
     class DriverRunner {
@@ -169,15 +167,13 @@ classDiagram
         -boolean headless
         -String remote
         -String browserSize
-        -String driverVersion
         -boolean startMaximized
         -String pageLoadStrategy
         -MutableCapabilities capabilities
         -String baseUrl
-        -long timeout
-        -long pollingInterval
+        -Duration timeout
+        -Duration pollingInterval
         -boolean clickViaJs
-        -String chromeOptions
         +isRemote() boolean
         +isHeadless() boolean
         +getCapabilities()
