@@ -5,5 +5,9 @@ import org.openqa.selenium.WebDriver;
 
 public interface DriverFactory {
 
+    default String getPlatform() {
+        return "";
+    }
+
     WebDriver create(Configuration configuration);
 }

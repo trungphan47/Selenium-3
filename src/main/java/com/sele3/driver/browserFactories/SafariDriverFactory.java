@@ -4,10 +4,10 @@ import com.sele3.configs.Configuration;
 import com.sele3.driver.DriverFactory;
 import com.sele3.driver.Platform;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.edge.EdgeDriver;
-import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.safari.SafariDriver;
+import org.openqa.selenium.safari.SafariOptions;
 
-public class EdgeDriverFactory implements DriverFactory {
+public class SafariDriverFactory implements DriverFactory {
 
     /**
      * Returns the platform name supported by this driver factory.
@@ -16,22 +16,18 @@ public class EdgeDriverFactory implements DriverFactory {
      */
     @Override
     public String  getPlatform() {
-        return Platform.Edge.name().toLowerCase();
+        return Platform.Safari.name().toLowerCase();
     }
 
     /**
-     * Creates a EdgeDriver using the provided configuration.
+     * Creates a Safari using the provided configuration.
      *
      * @param configuration driver configuration
-     * @return configured EdgeDriver
+     * @return configured Safari
      */
     @Override
     public WebDriver create(Configuration configuration) {
-        EdgeOptions options = new EdgeOptions();
-
-        if (configuration.isHeadless()) {
-            options.addArguments("--headless=new");
-        }
+        SafariOptions options = new SafariOptions();
 
         if (configuration.getPageLoadStrategy() != null) {
             options.setPageLoadStrategy(
@@ -39,6 +35,6 @@ public class EdgeDriverFactory implements DriverFactory {
             );
         }
 
-        return new EdgeDriver(options);
+        return new SafariDriver(options);
     }
 }
