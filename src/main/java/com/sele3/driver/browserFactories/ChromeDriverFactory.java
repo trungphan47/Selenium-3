@@ -10,16 +10,6 @@ import org.openqa.selenium.chrome.ChromeOptions;
 public class ChromeDriverFactory implements DriverFactory {
 
     /**
-     * Returns the platform name supported by this driver factory.
-     *
-     * @return the platform name in lowercase, e.g. {@code "safari"}
-     */
-    @Override
-    public String  getPlatform() {
-        return Platform.Chrome.name().toLowerCase();
-    }
-
-    /**
      * Creates a ChromeDriver using the provided configuration.
      *
      * @param configuration driver configuration

@@ -9,15 +9,6 @@ import org.openqa.selenium.edge.EdgeOptions;
 
 public class EdgeDriverFactory implements DriverFactory {
 
-    /**
-     * Returns the platform name supported by this driver factory.
-     *
-     * @return the platform name in lowercase, e.g. {@code "safari"}
-     */
-    @Override
-    public String  getPlatform() {
-        return Platform.Edge.name().toLowerCase();
-    }
 
     /**
      * Creates a EdgeDriver using the provided configuration.

@@ -10,16 +10,6 @@ import org.openqa.selenium.safari.SafariOptions;
 public class SafariDriverFactory implements DriverFactory {
 
     /**
-     * Returns the platform name supported by this driver factory.
-     *
-     * @return the platform name in lowercase, e.g. {@code "safari"}
-     */
-    @Override
-    public String  getPlatform() {
-        return Platform.Safari.name().toLowerCase();
-    }
-
-    /**
      * Creates a Safari using the provided configuration.
      *
      * @param configuration driver configuration

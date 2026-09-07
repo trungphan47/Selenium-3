@@ -6,7 +6,10 @@ import org.openqa.selenium.WebDriver;
 public interface DriverFactory {
 
     default String getPlatform() {
-        return "";
+        return getClass()
+                .getSimpleName()
+                .replace("DriverFactory", "")
+                .toLowerCase();
     }
 
     WebDriver create(Configuration configuration);

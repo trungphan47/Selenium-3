@@ -9,15 +9,6 @@ import org.openqa.selenium.firefox.FirefoxOptions;
 
 public class FirefoxDriverFactory implements DriverFactory {
 
-    /**
-     * Returns the platform name supported by this driver factory.
-     *
-     * @return the platform name in lowercase, e.g. {@code "safari"}
-     */
-    @Override
-    public String getPlatform() {
-        return Platform.Firefox.name().toLowerCase();
-    }
 
     /**
      * Creates a FireFoxDriver using the provided configuration.
