@@ -21,11 +21,7 @@ public class SafariDriverFactory implements DriverFactory {
     public WebDriver create(Configuration configuration) {
         SafariOptions options = new SafariOptions();
 
-        if (configuration.getPageLoadStrategy() != null) {
-            options.setPageLoadStrategy(
-                    configuration.getPageLoadStrategy()
-            );
-        }
+        options.setPageLoadStrategy(configuration.getPageLoadStrategy());
 
         return new SafariDriver(options);
     }

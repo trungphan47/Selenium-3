@@ -26,11 +26,7 @@ public class EdgeDriverFactory implements DriverFactory {
             options.addArguments("--headless=new");
         }
 
-        if (configuration.getPageLoadStrategy() != null) {
-            options.setPageLoadStrategy(
-                    configuration.getPageLoadStrategy()
-            );
-        }
+        options.setPageLoadStrategy(configuration.getPageLoadStrategy());
 
         return new EdgeDriver(options);
     }

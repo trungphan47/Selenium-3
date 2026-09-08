@@ -14,21 +14,19 @@ import java.util.ServiceLoader;
  */
 public final class DriverFactoryProvider {
 
-    private static final Map<String, DriverFactory> FACTORIES;
+    private static final Map<String, DriverFactory> FACTORIES = new HashMap<>();
 
     static {
-        Map<String, DriverFactory> factories = new HashMap<>();
 
         ServiceLoader<DriverFactory> loader = ServiceLoader.load(DriverFactory.class);
 
         for (DriverFactory factory : loader) {
-            factories.put(
-                    factory.getPlatform().toLowerCase(),
+            FACTORIES.put(
+                    factory.getPlatform(),
                     factory
             );
         }
 
-        FACTORIES = Map.copyOf(factories);
     }
 
     private DriverFactoryProvider() {

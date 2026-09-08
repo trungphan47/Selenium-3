@@ -26,11 +26,7 @@ public class FirefoxDriverFactory implements DriverFactory {
             options.addArguments("-headless");
         }
 
-        if (configuration.getPageLoadStrategy() != null) {
-            options.setPageLoadStrategy(
-                    configuration.getPageLoadStrategy()
-            );
-        }
+        options.setPageLoadStrategy(configuration.getPageLoadStrategy());
 
         return new FirefoxDriver(options);
     }
