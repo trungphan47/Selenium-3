@@ -12,28 +12,34 @@ import java.util.ServiceLoader;
  * <p>Browser driver factories are automatically discovered using Java's
  * {@link ServiceLoader} mechanism.</p>
  */
-public class DriverFactoryProvider {
+public final class DriverFactoryProvider {
 
-    private static final Map<String, DriverFactory> FACTORIES = new HashMap<>();
+    private static final Map<String, DriverFactory> FACTORIES;
 
-    static {ServiceLoader<DriverFactory> loader = ServiceLoader.load(DriverFactory.class);
+    static {
+        Map<String, DriverFactory> factories = new HashMap<>();
+
+        ServiceLoader<DriverFactory> loader = ServiceLoader.load(DriverFactory.class);
 
         for (DriverFactory factory : loader) {
-            FACTORIES.put(factory.getPlatform().toLowerCase(), factory);
+            factories.put(
+                    factory.getPlatform().toLowerCase(),
+                    factory
+            );
         }
+
+        FACTORIES = Map.copyOf(factories);
     }
 
-    /**
-     * Prevents instantiation of this utility class.
-     */
     private DriverFactoryProvider() {
     }
 
     /**
-     * Returns the appropriate driver factory based on the given configuration.
+     * Returns the appropriate {@link DriverFactory} based on the given configuration.
      *
      * <p>If remote execution is enabled, a {@link RemoteDriverFactory} is returned.
-     * Otherwise, the factory is selected based on the configured platform.</p>
+     * Otherwise, the driver factory is selected from the factories discovered by
+     * {@link java.util.ServiceLoader} based on the configured platform.</p>
      *
      * @param configuration the driver configuration
      * @return the driver factory matching the configuration

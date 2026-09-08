@@ -1,4 +1,0 @@
-com.sele3.driver.browserFactories.ChromeDriverFactory
-com.sele3.driver.browserFactories.FirefoxDriverFactory
-com.sele3.driver.browserFactories.EdgeDriverFactory
-com.sele3.driver.browserFactories.SafariDriverFactory

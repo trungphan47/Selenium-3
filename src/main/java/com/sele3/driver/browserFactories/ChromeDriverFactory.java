@@ -1,12 +1,13 @@
 package com.sele3.driver.browserFactories;
 
+import com.google.auto.service.AutoService;
 import com.sele3.configs.Configuration;
 import com.sele3.driver.DriverFactory;
-import com.sele3.driver.Platform;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+@AutoService(DriverFactory.class)
 public class ChromeDriverFactory implements DriverFactory {
 
     /**
