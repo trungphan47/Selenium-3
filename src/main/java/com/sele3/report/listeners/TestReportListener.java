@@ -34,9 +34,7 @@ public class TestReportListener implements ITestListener {
 
         System.out.println(">>> Provider set: " + reportProvider.get());
 
-        provider.startTest(
-                result.getMethod().getMethodName()
-        );
+        provider.startTest(result.getMethod().getMethodName());
     }
 
     /**
