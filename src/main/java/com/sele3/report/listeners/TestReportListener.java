@@ -2,6 +2,8 @@ package com.sele3.report.listeners;
 
 import com.sele3.report.ReportFactory;
 import com.sele3.report.ReportProvider;
+import org.testng.ISuite;
+import org.testng.ISuiteListener;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
 
@@ -9,114 +11,85 @@ import org.testng.ITestResult;
  * TestNG listener responsible for managing report providers
  * throughout the test execution lifecycle.
  *
- * <p>A report provider is created for each test and stored in a
- * {@link ThreadLocal} to support parallel test execution.</p>
+ * <p>A single report provider is used throughout the suite execution.
+ * Test-specific reporting resources are managed by the provider
+ * to support parallel test execution.</p>
  */
-public class TestReportListener implements ITestListener {
+public class TestReportListener implements ITestListener, ISuiteListener {
 
-    private final ThreadLocal<ReportProvider> reportProvider = new ThreadLocal<>();
+    private final ReportProvider reportProvider = ReportFactory.create();
 
     /**
-     * Initializes the report provider and starts reporting
-     * when a test begins.
+     * Starts reporting when a test begins.
      *
      * @param result the TestNG test result
      */
     @Override
     public void onTestStart(ITestResult result) {
-        System.out.println(">>> onTestStart");
-
-        ReportProvider provider = ReportFactory.create();
-
-        System.out.println(">>> Provider created: " + provider.getName());
-
-        reportProvider.set(provider);
-
-        System.out.println(">>> Provider set: " + reportProvider.get());
-
-        provider.startTest(result.getMethod().getMethodName());
+        reportProvider.startTest(
+                result.getMethod().getMethodName()
+        );
     }
 
     /**
-     * Marks the current test as passed and cleans up
-     * the report provider.
+     * Marks the current test as passed and ensures
+     * test-specific reporting resources are cleaned up.
      *
      * @param result the TestNG test result
      */
     @Override
     public void onTestSuccess(ITestResult result) {
-        provider().pass(
-                "Test passed: " + result.getMethod().getMethodName()
-        );
-
-        cleanup();
+        try {
+            reportProvider.pass(
+                    "Test passed: " + result.getMethod().getMethodName()
+            );
+        } finally {
+            reportProvider.endTest();
+        }
     }
 
     /**
-     * Marks the current test as failed and cleans up
-     * the report provider.
+     * Marks the current test as failed and ensures
+     * test-specific reporting resources are cleaned up.
      *
      * @param result the TestNG test result
      */
     @Override
     public void onTestFailure(ITestResult result) {
-        provider().fail(
-                "Test failed: " + result.getMethod().getMethodName()
-        );
-
-        cleanup();
+        try {
+            reportProvider.fail(
+                    "Test failed: " + result.getMethod().getMethodName()
+            );
+        } finally {
+            reportProvider.endTest();
+        }
     }
 
     /**
-     * Records the current test as skipped and cleans up
-     * the report provider if it has been initialized.
+     * Records the current test as skipped and ensures
+     * test-specific reporting resources are cleaned up.
      *
      * @param result the TestNG test result
      */
     @Override
     public void onTestSkipped(ITestResult result) {
-        ReportProvider provider = reportProvider.get();
-
-        if (provider != null) {
-            provider.step(
+        try {
+            reportProvider.step(
                     "Test skipped: " + result.getMethod().getMethodName()
             );
-
-            cleanup();
+        } finally {
+            reportProvider.endTest();
         }
     }
 
     /**
-     * Returns the report provider associated with the current thread.
+     * Finalizes the report after all tests in the suite
+     * have completed.
      *
-     * @return the current report provider
-     * @throws IllegalStateException if the report provider has not been initialized
+     * @param suite the completed TestNG suite
      */
-    private ReportProvider provider() {
-        ReportProvider provider = reportProvider.get();
-
-        if (provider == null) {
-            throw new IllegalStateException(
-                    "ReportProvider has not been initialized for the current test."
-            );
-        }
-
-        return provider;
-    }
-
-    /**
-     * Ends reporting for the current test and removes
-     * the report provider from the current thread.
-     */
-    private void cleanup() {
-        ReportProvider provider = reportProvider.get();
-
-        if (provider != null) {
-            try {
-                provider.endTest();
-            } finally {
-                reportProvider.remove();
-            }
-        }
+    @Override
+    public void onFinish(ISuite suite) {
+        reportProvider.finishReport();
     }
 }

@@ -34,8 +34,7 @@ public class ExtentReportProvider implements ReportProvider {
      * @return the configured ExtentReports instance
      */
     private static ExtentReports createReport() {
-        ExtentSparkReporter sparkReporter =
-                new ExtentSparkReporter(OUTPUT_PATH);
+        ExtentSparkReporter sparkReporter = new ExtentSparkReporter(OUTPUT_PATH);
 
         ExtentReports extentReports = new ExtentReports();
         extentReports.attachReporter(sparkReporter);
@@ -95,12 +94,22 @@ public class ExtentReportProvider implements ReportProvider {
     }
 
     /**
-     * Ends reporting for the current test and flushes
-     * the report data to the output file.
+     * Ends reporting for the current test and removes
+     * the Extent test associated with the current thread.
      */
     @Override
     public void endTest() {
         currentTest.remove();
+    }
+
+    /**
+     * Finalizes the Extent report by flushing all report data
+     * to the output file.
+     *
+     * <p>This should be called once after all tests have completed.</p>
+     */
+    @Override
+    public void finishReport() {
         EXTENT_REPORTS.flush();
     }
 
