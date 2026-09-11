@@ -1,6 +1,7 @@
 package com.sele3.report.listeners;
 
 import com.sele3.report.ReportFactory;
+import com.sele3.report.ReportManager;
 import com.sele3.report.ReportProvider;
 import org.testng.ISuite;
 import org.testng.ISuiteListener;
@@ -17,7 +18,7 @@ import org.testng.ITestResult;
  */
 public class TestReportListener implements ITestListener, ISuiteListener {
 
-    private final ReportProvider reportProvider = ReportFactory.create();
+    private final ReportProvider reportProvider = ReportManager.getProvider();
 
     /**
      * Starts reporting when a test begins.
@@ -26,8 +27,7 @@ public class TestReportListener implements ITestListener, ISuiteListener {
      */
     @Override
     public void onTestStart(ITestResult result) {
-        reportProvider.startTest(
-                result.getMethod().getMethodName()
+        reportProvider.startTest(result.getMethod().getMethodName()
         );
     }
 
