@@ -24,9 +24,30 @@ public class ExtentReportProvider implements ReportProvider {
             "target/reports/extent-reports/index.html"
     );
 
-    private static final ExtentReports EXTENT_REPORTS = createReport();
-
     private final ThreadLocal<ExtentTest> currentTest = new ThreadLocal<>();
+
+    /**
+     * Holds the shared ExtentReports instance.
+     *
+     * <p>The instance is initialized lazily when ExtentReports
+     * is actually used.</p>
+     */
+    private static final class ExtentHolder {
+
+        private static final ExtentReports INSTANCE = createReport();
+
+        private ExtentHolder() {
+        }
+    }
+
+    /**
+     * Returns the shared ExtentReports instance.
+     *
+     * @return the ExtentReports instance
+     */
+    private static ExtentReports extent() {
+        return ExtentHolder.INSTANCE;
+    }
 
     /**
      * Creates and configures the ExtentReports instance.
@@ -49,7 +70,7 @@ public class ExtentReportProvider implements ReportProvider {
      */
     @Override
     public void startTest(String testName) {
-        currentTest.set(EXTENT_REPORTS.createTest(testName));
+        currentTest.set(extent().createTest(testName));
     }
 
     /**
@@ -110,7 +131,7 @@ public class ExtentReportProvider implements ReportProvider {
      */
     @Override
     public void finishReport() {
-        EXTENT_REPORTS.flush();
+        extent().flush();
     }
 
     /**
