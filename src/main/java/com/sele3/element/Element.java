@@ -2,6 +2,8 @@ package com.sele3.element;
 
 import com.sele3.configs.ConfigManager;
 import com.sele3.driver.DriverManager;
+import com.sele3.waits.ElementCondition;
+import com.sele3.waits.ElementConditions;
 import com.sele3.waits.ElementWait;
 import com.sele3.waits.RetryAction;
 import org.openqa.selenium.By;
@@ -16,7 +18,22 @@ import org.openqa.selenium.WebElement;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 
+/**
+ * Represents a web element and provides common interaction,
+ * state-checking, waiting, and nested-element operations.
+ *
+ * <p>Element interactions such as click, send keys, and clear
+ * are automatically retried when transient Selenium exceptions occur.</p>
+ *
+ * <p>Wait operations use {@link ElementCondition} so that Selenium
+ * {@link WebElement} instances remain hidden from framework users.</p>
+ *
+ * <p>An element may also be nested inside another element. Nested
+ * elements are resolved relative to their parent element rather than
+ * directly from the WebDriver.</p>
+ */
 public class Element extends BaseElement {
 
     private static final List<Class<? extends Throwable>> CLICK_EXCEPTIONS =
@@ -35,295 +52,246 @@ public class Element extends BaseElement {
                     InvalidElementStateException.class
             );
 
+    /**
+     * Creates a root element using the specified locator.
+     *
+     * <p>The element will be located directly from the current WebDriver.</p>
+     *
+     * @param locator locator used to find the element
+     */
     public Element(By locator) {
         super(locator);
     }
 
-    public Element(By locator, String name) {
-        super(locator, name);
+    /**
+     * Creates a nested element within the specified parent element.
+     *
+     * <p>The element will be located relative to the parent element
+     * rather than directly from the WebDriver.</p>
+     *
+     * @param parent  parent element used as the search context
+     * @param locator locator used to find the nested element
+     */
+    public Element(BaseElement parent, By locator) {
+        super(parent, locator);
     }
 
     /**
-     * Clicks the element with automatic wait and retry.
-     * Uses JavaScript click when enabled in the configuration.
+     * Creates a nested element using this element as the parent.
+     *
+     * <p>This allows element hierarchies to be built fluently, for example:</p>
+     *
+     * <pre>
+     * Element row = table.find(By.cssSelector("tr"));
+     * Element button = row.find(By.cssSelector("button"));
+     * </pre>
+     *
+     * @param locator locator used to find the nested element
+     * @return nested element
+     */
+    public Element find(By locator) {
+        return new Element(this, locator);
+    }
+
+    /**
+     * Clicks the element with automatic retry.
+     *
+     * <p>The action is retried until the element becomes interactable
+     * or the configured timeout is reached.</p>
+     *
+     * <p>JavaScript click is used when enabled in the configuration.</p>
      */
     @Override
     public void click() {
         RetryAction.retry(
-                () -> {
-                    WebElement element =
-                            DriverManager.getDriver().findElement(locator);
-
-                    if (!element.isDisplayed() || !element.isEnabled()) {
-                        return false;
-                    }
-
-                    click(element);
-                    return true;
-                },
+                () -> performWhenInteractable(this::click),
                 CLICK_EXCEPTIONS
         );
     }
 
     /**
-     * Sends keys to the element with automatic wait and retry.
+     * Sends keys to the element with automatic retry.
+     *
+     * <p>The action is retried until the element becomes interactable
+     * or the configured timeout is reached.</p>
      *
      * @param keys keys to send
      */
     @Override
     public void sendKeys(CharSequence... keys) {
         RetryAction.retry(
-                () -> {
-                    WebElement element =
-                            DriverManager.getDriver().findElement(locator);
-
-                    if (!element.isDisplayed() || !element.isEnabled()) {
-                        return false;
-                    }
-
-                    element.sendKeys(keys);
-                    return true;
-                },
+                () -> performWhenInteractable(
+                        element -> element.sendKeys(keys)
+                ),
                 INPUT_EXCEPTIONS
         );
     }
 
     /**
-     * Clears the element with automatic wait and retry.
+     * Clears the element with automatic retry.
+     *
+     * <p>The action is retried until the element becomes interactable
+     * or the configured timeout is reached.</p>
      */
     @Override
     public void clear() {
         RetryAction.retry(
-                () -> {
-                    WebElement element =
-                            DriverManager.getDriver().findElement(locator);
-
-                    if (!element.isDisplayed() || !element.isEnabled()) {
-                        return false;
-                    }
-
-                    element.clear();
-                    return true;
-                },
+                () -> performWhenInteractable(WebElement::clear),
                 INPUT_EXCEPTIONS
         );
     }
 
     /**
-     * Returns the visible text of the element.
+     * Returns the current visible text of the element.
      *
-     * @return element text
+     * <p>This method performs an immediate lookup and does not wait
+     * for the element to become visible.</p>
+     *
+     * @return current element text
      */
     public String getText() {
-        return ElementWait.untilVisible(locator).getText();
+        return findElement().getText();
     }
 
     /**
-     * Returns the value of the specified DOM attribute.
-     *
-     * @param attributeName attribute name
-     * @return DOM attribute value
-     */
-    public String getDomAttribute(String attributeName) {
-        return ElementWait.untilPresent(locator)
-                .getDomAttribute(attributeName);
-    }
-
-    /**
-     * Returns the value of the specified DOM property.
+     * Returns the current value of the specified DOM property.
      *
      * @param propertyName property name
      * @return DOM property value
      */
     public String getDomProperty(String propertyName) {
-        return ElementWait.untilPresent(locator)
-                .getDomProperty(propertyName);
+        return findElement().getDomProperty(propertyName);
     }
 
     /**
-     * Returns whether the element is displayed within the default timeout.
+     * Returns whether the element is currently present in the DOM.
      *
-     * @return true if the element is displayed, otherwise false
+     * @return {@code true} if the element is present,
+     * otherwise {@code false}
      */
-    public boolean isDisplayed() {
-        return isDisplayedWithin(
-                ConfigManager.get().getTimeout()
-        );
-    }
-
-    /**
-     * Returns whether the element is displayed within the specified timeout.
-     *
-     * @param timeout maximum time to wait
-     * @return true if the element is displayed, otherwise false
-     */
-    public boolean isDisplayedWithin(Duration timeout) {
+    public boolean isPresent() {
         try {
-            ElementWait.untilVisible(locator, timeout);
+            findElement();
             return true;
-        } catch (TimeoutException | NoSuchElementException e) {
+        } catch (NoSuchElementException | StaleElementReferenceException e) {
             return false;
         }
     }
 
     /**
-     * Returns whether the element is enabled.
+     * Returns whether the element is currently displayed.
      *
-     * @return true if the element is enabled, otherwise false
+     * @return {@code true} if the element is displayed,
+     * otherwise {@code false}
+     */
+    public boolean isDisplayed() {
+        try {
+            return findElement().isDisplayed();
+        } catch (NoSuchElementException | StaleElementReferenceException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns whether the element becomes displayed within
+     * the specified timeout.
+     *
+     * @param timeout maximum time to wait
+     * @return {@code true} if the element becomes displayed,
+     * otherwise {@code false}
+     */
+    public boolean isDisplayedWithin(Duration timeout) {
+        try {
+            waitUntil(ElementConditions.visible(), timeout);
+            return true;
+        } catch (TimeoutException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns whether the element is currently enabled.
+     *
+     * @return {@code true} if the element is enabled,
+     * otherwise {@code false}
      */
     public boolean isEnabled() {
-        return ElementWait.untilPresent(locator)
-                .isEnabled();
+        try {
+            return findElement().isEnabled();
+        } catch (NoSuchElementException | StaleElementReferenceException e) {
+            return false;
+        }
     }
 
     /**
-     * Returns whether the element is selected.
+     * Returns whether the element is currently selected.
      *
-     * @return true if the element is selected, otherwise false
+     * @return {@code true} if the element is selected,
+     * otherwise {@code false}
      */
     public boolean isSelected() {
-        return ElementWait.untilPresent(locator)
-                .isSelected();
+        try {
+            return findElement().isSelected();
+        } catch (NoSuchElementException | StaleElementReferenceException e) {
+            return false;
+        }
     }
 
     /**
-     * Waits until the element is present in the DOM.
-     */
-    public void waitUntilPresent() {
-        ElementWait.untilPresent(locator);
-    }
-
-    /**
-     * Waits until the element is present in the DOM within the specified timeout.
+     * Waits until the specified condition is satisfied using
+     * the configured default timeout and polling interval.
      *
-     * @param timeout maximum time to wait
-     */
-    public void waitUntilPresent(Duration timeout) {
-        ElementWait.untilPresent(locator, timeout);
-    }
-
-    /**
-     * Waits until the element is visible.
-     */
-    public void waitUntilVisible() {
-        ElementWait.untilVisible(locator);
-    }
-
-    /**
-     * Waits until the element is visible within the specified timeout.
+     * <p>The condition is automatically retried until it is satisfied
+     * or the configured timeout is reached.</p>
      *
-     * @param timeout maximum time to wait
+     * @param condition condition to evaluate
      */
-    public void waitUntilVisible(Duration timeout) {
-        ElementWait.untilVisible(locator, timeout);
+    public void waitUntil(ElementCondition condition) {
+        new ElementWait(this).until(condition);
     }
 
     /**
-     * Waits until the element is invisible.
-     */
-    public void waitUntilInvisible() {
-        ElementWait.untilInvisible(locator);
-    }
-
-    /**
-     * Waits until the element is invisible within the specified timeout.
+     * Waits until the specified condition is satisfied within
+     * the specified timeout.
      *
-     * @param timeout maximum time to wait
-     */
-    public void waitUntilInvisible(Duration timeout) {
-        ElementWait.untilInvisible(locator, timeout);
-    }
-
-    /**
-     * Waits until the element is enabled.
-     */
-    public void waitUntilEnabled() {
-        ElementWait.untilEnabled(locator);
-    }
-
-    /**
-     * Waits until the element is enabled within the specified timeout.
+     * <p>The condition is automatically retried using the configured
+     * polling interval until it is satisfied or the timeout is reached.</p>
      *
-     * @param timeout maximum time to wait
+     * @param condition condition to evaluate
+     * @param timeout   maximum time to wait
      */
-    public void waitUntilEnabled(Duration timeout) {
-        ElementWait.untilEnabled(locator, timeout);
+    public void waitUntil(
+            ElementCondition condition,
+            Duration timeout
+    ) {
+        new ElementWait(this, timeout).until(condition);
     }
 
     /**
-     * Waits until the element is disabled.
-     */
-    public void waitUntilDisabled() {
-        ElementWait.untilDisabled(locator);
-    }
-
-    /**
-     * Waits until the element is disabled within the specified timeout.
+     * Performs the specified action when the element is interactable.
      *
-     * @param timeout maximum time to wait
-     */
-    public void waitUntilDisabled(Duration timeout) {
-        ElementWait.untilDisabled(locator, timeout);
-    }
-
-    /**
-     * Waits until the element is selected.
-     */
-    public void waitUntilSelected() {
-        ElementWait.untilSelected(locator);
-    }
-
-    /**
-     * Waits until the element is selected within the specified timeout.
+     * <p>An element is considered interactable when it is both displayed
+     * and enabled. Returning {@code false} allows the retry mechanism
+     * to attempt the action again.</p>
      *
-     * @param timeout maximum time to wait
+     * @param action action to perform on the underlying Selenium element
+     * @return {@code true} if the action was performed,
+     * otherwise {@code false}
      */
-    public void waitUntilSelected(Duration timeout) {
-        ElementWait.untilSelected(locator, timeout);
+    private boolean performWhenInteractable(Consumer<WebElement> action) {
+        WebElement element = findElement();
+
+        if (!element.isDisplayed() || !element.isEnabled()) {
+            return false;
+        }
+
+        action.accept(element);
+        return true;
     }
 
     /**
-     * Waits until the element text contains the specified text.
-     *
-     * @param text expected text
-     */
-    public void waitUntilTextContains(String text) {
-        ElementWait.untilTextContains(locator, text);
-    }
-
-    /**
-     * Waits until the element text contains the specified text
-     * within the specified timeout.
-     *
-     * @param text expected text
-     * @param timeout maximum time to wait
-     */
-    public void waitUntilTextContains(String text, Duration timeout) {
-        ElementWait.untilTextContains(locator, text, timeout);
-    }
-
-    /**
-     * Waits until the element text is different from the specified text.
-     *
-     * @param text text that the element should no longer equal
-     */
-    public void waitUntilTextNotEqual(String text) {
-        ElementWait.untilTextNotEqual(locator, text);
-    }
-
-    /**
-     * Waits until the element text is different from the specified text
-     * within the specified timeout.
-     *
-     * @param text text that the element should no longer equal
-     * @param timeout maximum time to wait
-     */
-    public void waitUntilTextNotEqual(String text, Duration timeout) {
-        ElementWait.untilTextNotEqual(locator, text, timeout);
-    }
-
-    /**
-     * Clicks the element using the configured click strategy.
+     * Clicks the specified Selenium element using the configured
+     * click strategy.
      *
      * @param element element to click
      */
@@ -337,7 +305,7 @@ public class Element extends BaseElement {
     }
 
     /**
-     * Clicks the element using JavaScript.
+     * Clicks the specified element using JavaScript.
      *
      * @param element element to click
      */

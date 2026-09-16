@@ -1,31 +1,41 @@
 package com.sele3.waits;
 
-import org.openqa.selenium.support.ui.WebDriverWait;
+import com.sele3.configs.ConfigManager;
+import com.sele3.driver.DriverManager;
+import org.openqa.selenium.WebDriver;
 
 import java.util.List;
 import java.util.function.Supplier;
 
-import static com.sele3.waits.WaitFactory.createWait;
-
+/**
+ * Provides retry support for actions that may temporarily fail
+ * because of transient Selenium conditions.
+ */
 public final class RetryAction {
 
     private RetryAction() {
     }
 
     /**
-     * Executes the specified action with automatic retry until it succeeds
+     * Repeatedly executes the specified action until it succeeds
      * or the configured timeout is reached.
      *
-     * @param action             action to execute
-     * @param exceptionsToIgnore exceptions to ignore while retrying
-     * @param <T>                action result type
-     * @return action result
+     * <p>The action is retried using the configured polling interval.
+     * The specified exceptions are ignored while retrying.</p>
+     *
+     * @param action action to execute
+     * @param exceptions exceptions to ignore while retrying
      */
-    public static <T> T retry(Supplier<T> action, List<Class<? extends Throwable>> exceptionsToIgnore) {
-        WebDriverWait wait = createWait();
+    public static void retry(
+            Supplier<Boolean> action,
+            List<Class<? extends Throwable>> exceptions) {
 
-        wait.ignoreAll(exceptionsToIgnore);
+        SeleniumWait<WebDriver> wait =
+                new SeleniumWait<>(DriverManager.getDriver());
 
-        return wait.until(driver -> action.get());
+        wait.withTimeout(ConfigManager.get().getTimeout())
+                .pollingEvery(ConfigManager.get().getPollingInterval())
+                .ignoreAll(exceptions)
+                .until(driver -> action.get());
     }
 }
