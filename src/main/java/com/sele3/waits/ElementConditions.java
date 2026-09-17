@@ -36,8 +36,8 @@ public final class ElementConditions {
     /**
      * Returns a condition that checks whether the element is invisible.
      *
-     * <p>The condition is satisfied when the element is either not displayed
-     * or no longer present in the DOM.</p>
+     * <p>The condition is satisfied when the element is either not
+     * displayed or no longer present in the DOM.</p>
      *
      * @return condition that is satisfied when the element is invisible
      */
@@ -55,17 +55,17 @@ public final class ElementConditions {
     }
 
     /**
-     * Returns a condition that checks whether the element is present
-     * and disabled.
+     * Returns a condition that checks whether the element is disabled.
      *
-     * <p>The condition is not considered satisfied when the element
-     * is not present in the DOM.</p>
+     * <p>The enabled state is evaluated on a single resolved Selenium
+     * element. If the element disappears or becomes stale during the
+     * evaluation, the condition returns {@code false} so the wait
+     * continues polling.</p>
      *
      * @return condition that is satisfied when the element is disabled
      */
     public static ElementCondition disabled() {
-        return element ->
-                element.isPresent() && !element.isEnabled();
+        return Element::isDisabled;
     }
 
     /**
@@ -81,7 +81,8 @@ public final class ElementConditions {
      * Returns a condition that checks whether the element text contains
      * the expected text.
      *
-     * <p>The element must be present before its text is evaluated.</p>
+     * <p>Text retrieval handles missing and stale elements through the
+     * element's automatic retry mechanism.</p>
      *
      * @param expectedText expected text fragment
      * @return condition that is satisfied when the element text contains
@@ -89,15 +90,15 @@ public final class ElementConditions {
      */
     public static ElementCondition textContains(String expectedText) {
         return element ->
-                element.isPresent()
-                        && element.getText().contains(expectedText);
+                element.getText().contains(expectedText);
     }
 
     /**
-     * Returns a condition that checks whether the element text is different
-     * from the specified text.
+     * Returns a condition that checks whether the element text is
+     * different from the specified text.
      *
-     * <p>The element must be present before its text is evaluated.</p>
+     * <p>Text retrieval handles missing and stale elements through the
+     * element's automatic retry mechanism.</p>
      *
      * @param text text that the element should no longer equal
      * @return condition that is satisfied when the element text differs
@@ -105,7 +106,6 @@ public final class ElementConditions {
      */
     public static ElementCondition textNotEqual(String text) {
         return element ->
-                element.isPresent()
-                        && !element.getText().equals(text);
+                !element.getText().equals(text);
     }
 }
