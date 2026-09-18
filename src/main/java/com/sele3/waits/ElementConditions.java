@@ -57,10 +57,8 @@ public final class ElementConditions {
     /**
      * Returns a condition that checks whether the element is disabled.
      *
-     * <p>The enabled state is evaluated on a single resolved Selenium
-     * element. If the element disappears or becomes stale during the
-     * evaluation, the condition returns {@code false} so the wait
-     * continues polling.</p>
+     * <p>Missing and stale elements are handled through the element's
+     * automatic retry mechanism.</p>
      *
      * @return condition that is satisfied when the element is disabled
      */
