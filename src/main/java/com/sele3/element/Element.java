@@ -1,9 +1,7 @@
 package com.sele3.element;
 
-import com.sele3.configs.ConfigManager;
 import com.sele3.driver.DriverManager;
 import com.sele3.waits.ElementCondition;
-import com.sele3.waits.ElementConditions;
 import com.sele3.waits.ElementWait;
 import com.sele3.waits.RetryAction;
 import org.openqa.selenium.By;
@@ -156,46 +154,29 @@ public class Element extends BaseElement {
 
 
     /**
-     * Returns whether the element is present in the DOM.
-     *
-     * <p>Returning {@code false} allows {@link ElementWait} to
-     * evaluate the condition again when the element has not been
-     * rendered yet.</p>
+     * Returns whether the element is currently present in the DOM.
      *
      * @return {@code true} if the element is present;
      * otherwise {@code false}
      */
     public boolean isPresent() {
         try {
-            RetryAction.retry(
-                    () -> {
-                        findElement();
-                        return true;
-                    },
-                    READ_EXCEPTIONS
-            );
-
+            findElement();
             return true;
-        } catch (TimeoutException e) {
+        } catch (NoSuchElementException | StaleElementReferenceException e) {
             return false;
         }
     }
 
     /**
-     * Returns whether the element is displayed.
+     * Returns whether the element becomes displayed within
+     * the configured timeout.
      *
-     * <p>A missing or stale element is considered not displayed.
-     * Returning {@code false} allows {@link ElementWait} to evaluate
-     * the condition again.</p>
-     *
-     * @return {@code true} if the element is displayed;
+     * @return {@code true} if the element becomes displayed;
      * otherwise {@code false}
      */
     public boolean isDisplayed() {
-        return RetryAction.retryForValue(
-                () -> findElement().isDisplayed(),
-                READ_EXCEPTIONS
-        );
+        return isDisplayedWithin(DriverManager.getConfiguration().getTimeout());
     }
 
     /**
@@ -208,7 +189,13 @@ public class Element extends BaseElement {
      */
     public boolean isDisplayedWithin(Duration timeout) {
         try {
-            waitUntil(ElementConditions.visible(), timeout);
+            RetryAction.retry(
+                    () -> findElement().isDisplayed(),
+                    timeout,
+                    DriverManager.getConfiguration().getPollingInterval(),
+                    READ_EXCEPTIONS
+            );
+
             return true;
         } catch (TimeoutException e) {
             return false;
@@ -226,7 +213,10 @@ public class Element extends BaseElement {
      * otherwise {@code false}
      */
     public boolean isEnabled() {
-        return findElement().isEnabled();
+        return RetryAction.retryForValue(
+                () -> findElement().isEnabled(),
+                READ_EXCEPTIONS
+        );
     }
 
     /**
@@ -301,7 +291,7 @@ public class Element extends BaseElement {
      * @param element element to click
      */
     private void performClick(WebElement element) {
-        if (ConfigManager.get().isClickViaJs()) {
+        if (DriverManager.getConfiguration().isClickViaJs()) {
             clickViaJs(element);
             return;
         }

@@ -42,7 +42,7 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is invisible
      */
     public static ElementCondition invisible() {
-        return element -> !element.isDisplayed();
+        return element -> !element.isPresent() || !element.isDisplayed();
     }
 
     /**

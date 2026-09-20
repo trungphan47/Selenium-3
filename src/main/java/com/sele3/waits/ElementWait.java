@@ -1,6 +1,6 @@
 package com.sele3.waits;
 
-import com.sele3.configs.ConfigManager;
+import com.sele3.driver.DriverManager;
 import com.sele3.element.Element;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.StaleElementReferenceException;
@@ -30,7 +30,7 @@ public class ElementWait extends SeleniumWait<Element> {
      * @param element the element to wait on
      */
     public ElementWait(Element element) {
-        this(element, ConfigManager.get().getTimeout());
+        this(element, DriverManager.getConfiguration().getTimeout());
     }
 
     /**
@@ -44,7 +44,7 @@ public class ElementWait extends SeleniumWait<Element> {
         super(element);
 
         withTimeout(timeout)
-                .pollingEvery(ConfigManager.get().getPollingInterval())
+                .pollingEvery(DriverManager.getConfiguration().getPollingInterval())
                 .ignoreAll(WAIT_EXCEPTIONS);
     }
 

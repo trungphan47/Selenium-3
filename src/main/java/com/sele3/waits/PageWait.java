@@ -1,6 +1,5 @@
 package com.sele3.waits;
 
-import com.sele3.configs.ConfigManager;
 import com.sele3.driver.DriverManager;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -23,8 +22,8 @@ public final class PageWait {
         SeleniumWait<WebDriver> wait =
                 new SeleniumWait<>(DriverManager.getDriver());
 
-        wait.withTimeout(ConfigManager.get().getTimeout())
-                .pollingEvery(ConfigManager.get().getPollingInterval())
+        wait.withTimeout(DriverManager.getConfiguration().getTimeout())
+                .pollingEvery(DriverManager.getConfiguration().getPollingInterval())
                 .until(driver ->
                         "complete".equals(
                                 ((JavascriptExecutor) driver)
