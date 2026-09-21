@@ -163,7 +163,7 @@ public class Element extends BaseElement {
         try {
             findElement();
             return true;
-        } catch (NoSuchElementException | StaleElementReferenceException e) {
+        } catch (NoSuchElementException e) {
             return false;
         }
     }
