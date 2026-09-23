@@ -122,4 +122,42 @@ public final class RetryAction {
 
         return result.get();
     }
+
+
+    /**
+     * Repeatedly executes the specified action using the configured
+     * timeout and polling interval.
+     *
+     * @param action action to execute
+     */
+    public static void retry(Supplier<Boolean> action) {
+        List<Class<? extends Throwable>> exceptions =
+                List.of();
+
+        retry(action, exceptions);
+    }
+
+    /**
+     * Repeatedly executes the specified action using the specified
+     * timeout and polling interval.
+     *
+     * @param action action to execute
+     * @param timeout maximum time to retry the action
+     * @param pollingInterval interval between retry attempts
+     */
+    public static void retry(
+            Supplier<Boolean> action,
+            Duration timeout,
+            Duration pollingInterval
+    ) {
+        List<Class<? extends Throwable>> exceptions =
+                List.of();
+
+        retry(
+                action,
+                timeout,
+                pollingInterval,
+                exceptions
+        );
+    }
 }

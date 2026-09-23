@@ -3,6 +3,8 @@ package com.sele3.report.providers;
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.Status;
+import com.aventstack.extentreports.markuputils.ExtentColor;
+import com.aventstack.extentreports.markuputils.MarkupHelper;
 import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 import com.google.auto.service.AutoService;
 import com.sele3.report.ReportProvider;
@@ -80,7 +82,12 @@ public class ExtentReportProvider implements ReportProvider {
      */
     @Override
     public void step(String message) {
-        currentTest().log(Status.INFO, message);
+        currentTest().info(
+                MarkupHelper.createLabel(
+                        message,
+                        ExtentColor.BLUE
+                )
+        );
     }
 
     /**
@@ -90,7 +97,12 @@ public class ExtentReportProvider implements ReportProvider {
      */
     @Override
     public void pass(String message) {
-        currentTest().pass(message);
+        currentTest().pass(
+                MarkupHelper.createLabel(
+                        message,
+                        ExtentColor.GREEN
+                )
+        );
     }
 
     /**
@@ -100,7 +112,12 @@ public class ExtentReportProvider implements ReportProvider {
      */
     @Override
     public void fail(String message) {
-        currentTest().fail(message);
+        currentTest().fail(
+                MarkupHelper.createLabel(
+                        message,
+                        ExtentColor.RED
+                )
+        );
     }
 
     /**
