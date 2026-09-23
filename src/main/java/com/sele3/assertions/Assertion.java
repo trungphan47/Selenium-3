@@ -9,8 +9,9 @@ import java.util.function.Supplier;
  * <p>Assertions are stored separately for each thread, allowing tests
  * to execute in parallel without sharing assertion failures.</p>
  *
- * <p>{@link #start()} must be called before performing assertions.
- * {@link #assertAll()} must be called after the test completes.</p>
+ * <p>When running with TestNG, {@link AssertionListener} manages the assertion
+ * lifecycle for each test. Other runners can call {@link #start()} and
+ * {@link #assertAll()} explicitly.</p>
  */
 public final class Assertion {
 
@@ -64,16 +65,14 @@ public final class Assertion {
      *
      * @param condition       condition to evaluate
      * @param timeout         maximum time to wait
-     * @param pollingInterval interval between evaluation attempts
      * @param message         failure message
      */
     public static void assertTrue(
             Supplier<Boolean> condition,
             Duration timeout,
-            Duration pollingInterval,
             String message
     ) {
-        get().assertTrue(condition, timeout, pollingInterval, message);
+        get().assertTrue(condition, timeout, message);
     }
 
     /**
@@ -106,16 +105,14 @@ public final class Assertion {
      *
      * @param condition       condition to evaluate
      * @param timeout         maximum time to wait
-     * @param pollingInterval interval between evaluation attempts
      * @param message         failure message
      */
     public static void assertFalse(
             Supplier<Boolean> condition,
             Duration timeout,
-            Duration pollingInterval,
             String message
     ) {
-        get().assertFalse(condition, timeout, pollingInterval, message);
+        get().assertFalse(condition, timeout, message);
     }
 
     /**
@@ -157,7 +154,6 @@ public final class Assertion {
      * @param actualSupplier  supplier that retrieves the actual value
      * @param expected        expected value
      * @param timeout         maximum time to wait
-     * @param pollingInterval interval between retrieval attempts
      * @param message         failure message
      * @param <T>             value type
      */
@@ -165,10 +161,9 @@ public final class Assertion {
             Supplier<T> actualSupplier,
             T expected,
             Duration timeout,
-            Duration pollingInterval,
             String message
     ) {
-        get().assertEquals(actualSupplier, expected, timeout, pollingInterval, message);
+        get().assertEquals(actualSupplier, expected, timeout, message);
     }
 
     /**
@@ -216,4 +211,5 @@ public final class Assertion {
 
         return assertion;
     }
+
 }

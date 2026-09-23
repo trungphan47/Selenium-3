@@ -1,11 +1,13 @@
 package com.sele3.report.listeners;
 
+import com.google.auto.service.AutoService;
 import com.sele3.report.ReportFactory;
 import com.sele3.report.ReportManager;
 import com.sele3.report.ReportProvider;
 import org.testng.ISuite;
 import org.testng.ISuiteListener;
 import org.testng.ITestListener;
+import org.testng.ITestNGListener;
 import org.testng.ITestResult;
 
 /**
@@ -16,6 +18,7 @@ import org.testng.ITestResult;
  * Test-specific reporting resources are managed by the provider
  * to support parallel test execution.</p>
  */
+@AutoService(ITestNGListener.class)
 public class TestReportListener implements ITestListener, ISuiteListener {
 
     private final ReportProvider reportProvider = ReportManager.getProvider();

@@ -1,5 +1,7 @@
 package com.sele3.assertions;
 
+import com.sele3.driver.DriverManager;
+import com.sele3.report.ReportManager;
 import com.sele3.waits.RetryAction;
 import org.openqa.selenium.TimeoutException;
 
@@ -17,7 +19,7 @@ import java.util.function.Supplier;
  * <p>Conditions supplied through {@link Supplier} are automatically
  * retried until they meet the expectation or the timeout is reached.</p>
  */
-final class SoftAssertion {
+public class SoftAssertion {
 
     /**
      * Stores assertion failures collected during the current test.
@@ -28,12 +30,15 @@ final class SoftAssertion {
      * Immediately verifies that the specified condition is {@code true}.
      *
      * @param condition evaluated condition
-     * @param message failure message
+     * @param message   failure message
      */
     void assertTrue(boolean condition, String message) {
-        if (!condition) {
-            addFailure(message, true, false, null);
+        if (condition) {
+            reportPassed(message, true, condition);
+            return;
         }
+
+        addFailure(message, true, condition, null);
     }
 
     /**
@@ -41,10 +46,15 @@ final class SoftAssertion {
      * {@code true} or the configured timeout is reached.
      *
      * @param condition condition to evaluate
-     * @param message failure message
+     * @param message   failure message
      */
     void assertTrue(Supplier<Boolean> condition, String message) {
-        assertBoolean(condition, true, null, null, message);
+        assertBoolean(
+                condition,
+                true,
+                DriverManager.getConfiguration().getTimeout(),
+                message
+        );
     }
 
     /**
@@ -52,24 +62,26 @@ final class SoftAssertion {
      * {@code true} or the specified timeout is reached.
      *
      * @param condition condition to evaluate
-     * @param timeout maximum time to wait
-     * @param pollingInterval interval between evaluation attempts
-     * @param message failure message
+     * @param timeout   maximum time to wait
+     * @param message   failure message
      */
-    void assertTrue(Supplier<Boolean> condition, Duration timeout, Duration pollingInterval, String message) {
-        assertBoolean(condition, true, timeout, pollingInterval, message);
+    void assertTrue(Supplier<Boolean> condition, Duration timeout, String message) {
+        assertBoolean(condition, true, timeout, message);
     }
 
     /**
      * Immediately verifies that the specified condition is {@code false}.
      *
      * @param condition evaluated condition
-     * @param message failure message
+     * @param message   failure message
      */
     void assertFalse(boolean condition, String message) {
-        if (condition) {
-            addFailure(message, false, true, null);
+        if (!condition) {
+            reportPassed(message, false, condition);
+            return;
         }
+
+        addFailure(message, false, condition, null);
     }
 
     /**
@@ -77,10 +89,15 @@ final class SoftAssertion {
      * {@code false} or the configured timeout is reached.
      *
      * @param condition condition to evaluate
-     * @param message failure message
+     * @param message   failure message
      */
     void assertFalse(Supplier<Boolean> condition, String message) {
-        assertBoolean(condition, false, null, null, message);
+        assertBoolean(
+                condition,
+                false,
+                DriverManager.getConfiguration().getTimeout(),
+                message
+        );
     }
 
     /**
@@ -88,26 +105,28 @@ final class SoftAssertion {
      * {@code false} or the specified timeout is reached.
      *
      * @param condition condition to evaluate
-     * @param timeout maximum time to wait
-     * @param pollingInterval interval between evaluation attempts
-     * @param message failure message
+     * @param timeout   maximum time to wait
+     * @param message   failure message
      */
-    void assertFalse(Supplier<Boolean> condition, Duration timeout, Duration pollingInterval, String message) {
-        assertBoolean(condition, false, timeout, pollingInterval, message);
+    void assertFalse(Supplier<Boolean> condition, Duration timeout, String message) {
+        assertBoolean(condition, false, timeout, message);
     }
 
     /**
      * Immediately verifies that the actual value equals the expected value.
      *
-     * @param actual actual value
+     * @param actual   actual value
      * @param expected expected value
-     * @param message failure message
-     * @param <T> value type
+     * @param message  failure message
+     * @param <T>      value type
      */
     <T> void assertEquals(T actual, T expected, String message) {
-        if (!Objects.deepEquals(actual, expected)) {
-            addFailure(message, expected, actual, null);
+        if (Objects.deepEquals(actual, expected)) {
+            reportPassed(message, expected, actual);
+            return;
         }
+
+        addFailure(message, expected, actual, null);
     }
 
     /**
@@ -115,12 +134,17 @@ final class SoftAssertion {
      * value or the configured timeout is reached.
      *
      * @param actualSupplier supplier that retrieves the actual value
-     * @param expected expected value
-     * @param message failure message
-     * @param <T> value type
+     * @param expected       expected value
+     * @param message        failure message
+     * @param <T>            value type
      */
     <T> void assertEquals(Supplier<T> actualSupplier, T expected, String message) {
-        assertEquals(actualSupplier, expected, null, null, message);
+        assertEquals(
+                actualSupplier,
+                expected,
+                DriverManager.getConfiguration().getTimeout(),
+                message
+        );
     }
 
     /**
@@ -128,13 +152,12 @@ final class SoftAssertion {
      * value or the specified timeout is reached.
      *
      * @param actualSupplier supplier that retrieves the actual value
-     * @param expected expected value
-     * @param timeout maximum time to wait
-     * @param pollingInterval interval between retrieval attempts
-     * @param message failure message
-     * @param <T> value type
+     * @param expected       expected value
+     * @param timeout        maximum time to wait
+     * @param message        failure message
+     * @param <T>            value type
      */
-    <T> void assertEquals(Supplier<T> actualSupplier, T expected, Duration timeout, Duration pollingInterval, String message) {
+    <T> void assertEquals(Supplier<T> actualSupplier, T expected, Duration timeout, String message) {
         AtomicReference<T> lastActual = new AtomicReference<>();
 
         Supplier<Boolean> comparison = () -> {
@@ -144,7 +167,8 @@ final class SoftAssertion {
         };
 
         try {
-            retry(comparison, timeout, pollingInterval);
+            retry(comparison, timeout);
+            reportPassed(message, expected, lastActual.get());
         } catch (TimeoutException e) {
             addFailure(message, expected, lastActual.get(), e);
         }
@@ -181,12 +205,11 @@ final class SoftAssertion {
      * the expected value.
      *
      * @param condition condition to evaluate
-     * @param expected expected boolean value
-     * @param timeout custom timeout, or {@code null} to use the configured timeout
-     * @param pollingInterval custom polling interval, or {@code null} to use the configured interval
-     * @param message failure message
+     * @param expected  expected boolean value
+     * @param timeout   maximum time to wait
+     * @param message   failure message
      */
-    private void assertBoolean(Supplier<Boolean> condition, boolean expected, Duration timeout, Duration pollingInterval, String message) {
+    private void assertBoolean(Supplier<Boolean> condition, boolean expected, Duration timeout, String message) {
         AtomicReference<Boolean> lastActual = new AtomicReference<>();
 
         Supplier<Boolean> comparison = () -> {
@@ -196,49 +219,82 @@ final class SoftAssertion {
         };
 
         try {
-            retry(comparison, timeout, pollingInterval);
+            retry(comparison, timeout);
+            reportPassed(message, expected, lastActual.get());
         } catch (TimeoutException e) {
             addFailure(message, expected, lastActual.get(), e);
         }
     }
 
     /**
-     * Repeatedly evaluates a condition using either the configured
-     * or custom wait settings.
+     * Repeatedly evaluates a condition using the specified timeout
+     * and the configured polling interval.
      *
      * @param condition condition to evaluate
-     * @param timeout custom timeout, or {@code null} to use the configured timeout
-     * @param pollingInterval custom polling interval
+     * @param timeout   maximum time to wait
      */
-    private void retry(Supplier<Boolean> condition, Duration timeout, Duration pollingInterval) {
-        if (timeout == null) {
-            RetryAction.retry(condition);
-            return;
-        }
-
-        RetryAction.retry(condition, timeout, pollingInterval);
+    private void retry(Supplier<Boolean> condition, Duration timeout) {
+        RetryAction.retry(
+                condition,
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval()
+        );
     }
 
     /**
      * Creates and stores an assertion failure.
      *
-     * @param message assertion message
+     * @param message  assertion message
      * @param expected expected value
-     * @param actual actual value
-     * @param cause failure cause, or {@code null} when no cause is available
+     * @param actual   actual value
+     * @param cause    failure cause, or {@code null} when no cause is available
      */
     private void addFailure(String message, Object expected, Object actual, Throwable cause) {
-        String details = String.format(
-                "%s Expected <%s> but found <%s>.",
-                message,
-                expected,
-                actual
-        ).trim();
+        String details = formatDetails(message, expected, actual);
+
+        reportFailed(details);
 
         AssertionError error = cause == null
                 ? new AssertionError(details)
                 : new AssertionError(details, cause);
 
         errors.add(error);
+    }
+
+    /**
+     * Formats an assertion message with its expected and actual values.
+     *
+     * @param message  assertion message
+     * @param expected expected value
+     * @param actual   actual value
+     * @return formatted assertion details
+     */
+    private String formatDetails(String message, Object expected, Object actual) {
+        return String.format(
+                "%s Expected: %s, Actual: %s.",
+                message,
+                expected,
+                actual
+        ).trim();
+    }
+
+    /**
+     * Records a successful assertion in the report.
+     *
+     * @param message  assertion message
+     * @param expected expected value
+     * @param actual   actual value
+     */
+    private void reportPassed(String message, Object expected, Object actual) {
+        ReportManager.getProvider().pass("Assertion Passed: " + formatDetails(message, expected, actual));
+    }
+
+    /**
+     * Records a failed assertion in the report.
+     *
+     * @param details assertion failure details
+     */
+    private void reportFailed(String details) {
+        ReportManager.getProvider().fail("Assertion Failed: " + details);
     }
 }
