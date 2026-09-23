@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  * <p>Conditions supplied through {@link Supplier} are automatically
  * retried until they meet the expectation or the timeout is reached.</p>
  */
-public class SoftAssertion {
+final class SoftAssertion {
 
     /**
      * Stores assertion failures collected during the current test.

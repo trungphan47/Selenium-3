@@ -1,7 +1,5 @@
 package com.sele3.base;
 
-import com.sele3.assertions.Assertion;
-import com.sele3.assertions.SoftAssertion;
 import com.sele3.configs.ConfigLoader;
 import com.sele3.configs.Configuration;
 import com.sele3.driver.DriverManager;
