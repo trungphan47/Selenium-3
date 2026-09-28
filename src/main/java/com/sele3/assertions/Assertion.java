@@ -18,7 +18,8 @@ public final class Assertion {
     /**
      * Stores the soft assertion instance associated with each test thread.
      */
-    private static final ThreadLocal<SoftAssertion> ASSERTION = new ThreadLocal<>();
+    private static final ThreadLocal<SoftAssertion> ASSERTION =
+            ThreadLocal.withInitial(SoftAssertion::new);
 
     /**
      * Prevents instantiation of this utility class.
@@ -187,11 +188,17 @@ public final class Assertion {
      * @param message aggregated failure message
      */
     public static void assertAll(String message) {
-        try {
-            get().assertAll(message);
-        } finally {
-            ASSERTION.remove();
-        }
+        get().assertAll(message);
+    }
+
+    /**
+     * Removes the soft assertion instance associated with the current thread.
+     *
+     * <p>Call this after a test finishes to prevent its assertion state from
+     * being reused by another test running on the same thread.</p>
+     */
+    public static void clear() {
+        ASSERTION.remove();
     }
 
     /**
@@ -204,9 +211,8 @@ public final class Assertion {
         SoftAssertion assertion = ASSERTION.get();
 
         if (assertion == null) {
-            throw new IllegalStateException(
-                    "Assertion has not been initialized. Call Assertion.start() first."
-            );
+            assertion = new SoftAssertion();
+            ASSERTION.set(assertion);
         }
 
         return assertion;
