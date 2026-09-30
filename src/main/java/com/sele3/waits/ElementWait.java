@@ -7,6 +7,7 @@ import org.openqa.selenium.StaleElementReferenceException;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Provides wait functionality for {@link Element} instances.
@@ -45,7 +46,33 @@ public class ElementWait extends SeleniumWait<Element> {
 
         withTimeout(timeout)
                 .pollingEvery(DriverManager.getConfiguration().getPollingInterval())
-                .ignoreAll(WAIT_EXCEPTIONS);
+                .ignoreAll(WAIT_EXCEPTIONS)
+                .ignoring(RetryContext.ConditionNotSatisfiedException.class);
+    }
+
+    /**
+     * Repeatedly evaluates the specified condition until it returns a value
+     * other than {@code null} or {@code false}, or the timeout is reached.
+     *
+     * <p>If an outer polling attempt is already active on the current thread,
+     * the condition is evaluated once without starting another polling loop.
+     * A {@code null} or {@code false} result signals that the outer loop must
+     * try again.</p>
+     *
+     * @param condition condition to evaluate against the element
+     * @param <V>       condition result type
+     * @return the value returned when the condition is satisfied
+     * @throws org.openqa.selenium.TimeoutException if the timeout is reached,
+     *         or a nested condition returns {@code null} or {@code false}
+     */
+    @Override
+    public <V> V until(Function<? super Element, ? extends V> condition) {
+        if (RetryContext.isActive()) {
+            return RetryContext.requireSatisfied(condition.apply(input));
+        }
+
+        return super.until(value ->
+                RetryContext.evaluate(() -> condition.apply(value)));
     }
 
     /**
@@ -54,6 +81,7 @@ public class ElementWait extends SeleniumWait<Element> {
      * @param condition condition to evaluate
      */
     public void until(ElementCondition condition) {
-        super.until(condition::matches);
+        Function<Element, Boolean> evaluation = condition::matches;
+        until(evaluation);
     }
 }

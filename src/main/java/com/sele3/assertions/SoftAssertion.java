@@ -3,11 +3,13 @@ package com.sele3.assertions;
 import com.sele3.driver.DriverManager;
 import com.sele3.report.ReportManager;
 import com.sele3.waits.RetryAction;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.TimeoutException;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -237,7 +239,11 @@ final class SoftAssertion {
         RetryAction.retry(
                 condition,
                 timeout,
-                DriverManager.getConfiguration().getPollingInterval()
+                DriverManager.getConfiguration().getPollingInterval(),
+                List.of(
+                        NoSuchElementException.class,
+                        StaleElementReferenceException.class
+                )
         );
     }
 

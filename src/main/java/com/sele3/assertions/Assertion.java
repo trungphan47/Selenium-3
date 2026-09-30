@@ -9,7 +9,7 @@ import java.util.function.Supplier;
  * <p>Assertions are stored separately for each thread, allowing tests
  * to execute in parallel without sharing assertion failures.</p>
  *
- * <p>When running with TestNG, {@link AssertionListener} manages the assertion
+ * <p>When running with TestNG, {@link TestNgAssertionListener} manages the assertion
  * lifecycle for each test. Other runners can call {@link #start()} and
  * {@link #assertAll()} explicitly.</p>
  */

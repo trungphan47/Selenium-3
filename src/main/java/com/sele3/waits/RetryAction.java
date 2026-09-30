@@ -1,6 +1,8 @@
 package com.sele3.waits;
 
 import com.sele3.driver.DriverManager;
+import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 
 import java.time.Duration;
@@ -13,6 +15,12 @@ import java.util.function.Supplier;
  * because of transient Selenium conditions.
  */
 public final class RetryAction {
+
+    private static final List<Class<? extends Throwable>> DEFAULT_EXCEPTIONS =
+            List.of(
+                    NoSuchElementException.class,
+                    StaleElementReferenceException.class
+            );
 
     private RetryAction() {
     }
@@ -54,13 +62,19 @@ public final class RetryAction {
             Duration pollingInterval,
             List<Class<? extends Throwable>> exceptions
     ) {
+        if (RetryContext.isActive()) {
+            RetryContext.requireSatisfied(action.get());
+            return;
+        }
+
         SeleniumWait<WebDriver> wait =
                 new SeleniumWait<>(DriverManager.getDriver());
 
         wait.withTimeout(timeout)
                 .pollingEvery(pollingInterval)
                 .ignoreAll(exceptions)
-                .until(ignored -> action.get());
+                .ignoring(RetryContext.ConditionNotSatisfiedException.class)
+                .until(ignored -> RetryContext.evaluate(action));
     }
 
     /**
@@ -108,6 +122,10 @@ public final class RetryAction {
             Duration pollingInterval,
             List<Class<? extends Throwable>> exceptions
     ) {
+        if (RetryContext.isActive()) {
+            return action.get();
+        }
+
         AtomicReference<T> result = new AtomicReference<>();
 
         retry(
@@ -131,10 +149,7 @@ public final class RetryAction {
      * @param action action to execute
      */
     public static void retry(Supplier<Boolean> action) {
-        List<Class<? extends Throwable>> exceptions =
-                List.of();
-
-        retry(action, exceptions);
+        retry(action, DEFAULT_EXCEPTIONS);
     }
 
     /**
@@ -150,14 +165,11 @@ public final class RetryAction {
             Duration timeout,
             Duration pollingInterval
     ) {
-        List<Class<? extends Throwable>> exceptions =
-                List.of();
-
         retry(
                 action,
                 timeout,
                 pollingInterval,
-                exceptions
+                DEFAULT_EXCEPTIONS
         );
     }
 }
