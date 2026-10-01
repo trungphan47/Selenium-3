@@ -99,8 +99,22 @@ public class Element extends BaseElement {
      */
     @Override
     public void click() {
+        click(DriverManager.getConfiguration().getTimeout());
+    }
+
+    /**
+     * Clicks the element using the specified timeout.
+     *
+     * <p>A zero timeout attempts the interaction once. A positive timeout
+     * retries until the interaction succeeds or the timeout is reached.</p>
+     *
+     * @param timeout maximum time to retry the interaction
+     */
+    public void click(Duration timeout) {
         RetryAction.retry(
                 () -> performWhenInteractable(this::performClick),
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval(),
                 CLICK_EXCEPTIONS
         );
     }
@@ -115,10 +129,25 @@ public class Element extends BaseElement {
      */
     @Override
     public void sendKeys(CharSequence... keys) {
+        sendKeys(DriverManager.getConfiguration().getTimeout(), keys);
+    }
+
+    /**
+     * Sends keys to the element using the specified timeout.
+     *
+     * <p>A zero timeout attempts the interaction once. A positive timeout
+     * retries until the interaction succeeds or the timeout is reached.</p>
+     *
+     * @param timeout maximum time to retry the interaction
+     * @param keys    keys to send
+     */
+    public void sendKeys(Duration timeout, CharSequence... keys) {
         RetryAction.retry(
                 () -> performWhenInteractable(
                         element -> element.sendKeys(keys)
                 ),
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval(),
                 INPUT_EXCEPTIONS
         );
     }
@@ -131,8 +160,22 @@ public class Element extends BaseElement {
      */
     @Override
     public void clear() {
+        clear(DriverManager.getConfiguration().getTimeout());
+    }
+
+    /**
+     * Clears the element using the specified timeout.
+     *
+     * <p>A zero timeout attempts the interaction once. A positive timeout
+     * retries until the interaction succeeds or the timeout is reached.</p>
+     *
+     * @param timeout maximum time to retry the interaction
+     */
+    public void clear(Duration timeout) {
         RetryAction.retry(
                 () -> performWhenInteractable(WebElement::clear),
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval(),
                 INPUT_EXCEPTIONS
         );
     }
@@ -146,8 +189,23 @@ public class Element extends BaseElement {
      * @return visible element text
      */
     public String getText() {
+        return getText(DriverManager.getConfiguration().getTimeout());
+    }
+
+    /**
+     * Returns the visible text using the specified timeout.
+     *
+     * <p>A zero timeout reads once and propagates any Selenium exception.
+     * A positive timeout retries temporarily missing or stale elements.
+     * Any returned text, including an empty string, is successful.</p>
+     *
+     * @param timeout maximum time to retry the read operation
+     * @return visible element text
+     */
+    public String getText(Duration timeout) {
         return RetryAction.retryForValue(
                 () -> findElement().getText(),
+                timeout,
                 READ_EXCEPTIONS
         );
     }
@@ -180,6 +238,20 @@ public class Element extends BaseElement {
     }
 
     /**
+     * Returns whether the element becomes displayed within the specified timeout.
+     *
+     * <p>A zero timeout checks the current state once. A missing element
+     * returns {@code false}; a stale reference is propagated to the caller.</p>
+     *
+     * @param timeout maximum time to wait
+     * @return {@code true} if the element becomes displayed;
+     * otherwise {@code false}
+     */
+    public boolean isDisplayed(Duration timeout) {
+        return isDisplayedWithin(timeout);
+    }
+
+    /**
      * Returns whether the element becomes displayed within
      * the specified timeout.
      *
@@ -188,6 +260,14 @@ public class Element extends BaseElement {
      * otherwise {@code false}
      */
     public boolean isDisplayedWithin(Duration timeout) {
+        if (timeout.isZero()) {
+            try {
+                return findElement().isDisplayed();
+            } catch (NoSuchElementException e) {
+                return false;
+            }
+        }
+
         try {
             RetryAction.retry(
                     () -> findElement().isDisplayed(),
@@ -213,8 +293,24 @@ public class Element extends BaseElement {
      * otherwise {@code false}
      */
     public boolean isEnabled() {
+        return isEnabled(DriverManager.getConfiguration().getTimeout());
+    }
+
+    /**
+     * Returns whether the element is enabled using the specified timeout.
+     *
+     * <p>A zero timeout reads the state once and propagates any Selenium
+     * exception. A positive timeout retries temporarily missing or stale
+     * elements. Either boolean value is a successful read.</p>
+     *
+     * @param timeout maximum time to retry the state read
+     * @return {@code true} if the element is enabled;
+     * otherwise {@code false}
+     */
+    public boolean isEnabled(Duration timeout) {
         return RetryAction.retryForValue(
                 () -> findElement().isEnabled(),
+                timeout,
                 READ_EXCEPTIONS
         );
     }
@@ -230,8 +326,24 @@ public class Element extends BaseElement {
      * otherwise {@code false}
      */
     public boolean isSelected() {
+        return isSelected(DriverManager.getConfiguration().getTimeout());
+    }
+
+    /**
+     * Returns whether the element is selected using the specified timeout.
+     *
+     * <p>A zero timeout reads the state once and propagates any Selenium
+     * exception. A positive timeout retries temporarily missing or stale
+     * elements. Either boolean value is a successful read.</p>
+     *
+     * @param timeout maximum time to retry the state read
+     * @return {@code true} if the element is selected;
+     * otherwise {@code false}
+     */
+    public boolean isSelected(Duration timeout) {
         return RetryAction.retryForValue(
                 () -> findElement().isSelected(),
+                timeout,
                 READ_EXCEPTIONS
         );
     }
@@ -325,8 +437,24 @@ public class Element extends BaseElement {
      * otherwise {@code false}
      */
     public boolean isDisabled() {
+        return isDisabled(DriverManager.getConfiguration().getTimeout());
+    }
+
+    /**
+     * Returns whether the element is disabled using the specified timeout.
+     *
+     * <p>A zero timeout reads the state once and propagates any Selenium
+     * exception. A positive timeout retries temporarily missing or stale
+     * elements. Either boolean value is a successful read.</p>
+     *
+     * @param timeout maximum time to retry the state read
+     * @return {@code true} if the element is disabled;
+     * otherwise {@code false}
+     */
+    public boolean isDisabled(Duration timeout) {
         return RetryAction.retryForValue(
                 () -> !findElement().isEnabled(),
+                timeout,
                 READ_EXCEPTIONS
         );
     }

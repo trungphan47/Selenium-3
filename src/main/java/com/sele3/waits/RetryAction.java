@@ -3,6 +3,7 @@ package com.sele3.waits;
 import com.sele3.driver.DriverManager;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 
 import java.time.Duration;
@@ -62,8 +63,12 @@ public final class RetryAction {
             Duration pollingInterval,
             List<Class<? extends Throwable>> exceptions
     ) {
-        if (RetryContext.isActive()) {
-            RetryContext.requireSatisfied(action.get());
+        if (timeout.isZero()) {
+            if (!Boolean.TRUE.equals(action.get())) {
+                throw new TimeoutException(
+                        "Condition was not satisfied in a single attempt (timeout: 0 ms)."
+                );
+            }
             return;
         }
 
@@ -73,8 +78,7 @@ public final class RetryAction {
         wait.withTimeout(timeout)
                 .pollingEvery(pollingInterval)
                 .ignoreAll(exceptions)
-                .ignoring(RetryContext.ConditionNotSatisfiedException.class)
-                .until(ignored -> RetryContext.evaluate(action));
+                .until(ignored -> action.get());
     }
 
     /**
@@ -103,6 +107,36 @@ public final class RetryAction {
     }
 
     /**
+     * Executes a value operation using the specified timeout and configured
+     * polling interval.
+     *
+     * <p>A zero timeout executes the operation once and propagates its
+     * exception without starting a wait. Any returned value is successful.</p>
+     *
+     * @param action     operation that returns a value
+     * @param timeout    maximum time to retry the operation
+     * @param exceptions exceptions to ignore while retrying
+     * @param <T>        returned value type
+     * @return value returned by the successfully executed operation
+     */
+    public static <T> T retryForValue(
+            Supplier<T> action,
+            Duration timeout,
+            List<Class<? extends Throwable>> exceptions
+    ) {
+        if (timeout.isZero()) {
+            return action.get();
+        }
+
+        return retryForValue(
+                action,
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval(),
+                exceptions
+        );
+    }
+
+    /**
      * Executes an operation that returns a value with automatic retry.
      *
      * <p>The operation is retried when one of the specified exceptions
@@ -122,7 +156,7 @@ public final class RetryAction {
             Duration pollingInterval,
             List<Class<? extends Throwable>> exceptions
     ) {
-        if (RetryContext.isActive()) {
+        if (timeout.isZero()) {
             return action.get();
         }
 

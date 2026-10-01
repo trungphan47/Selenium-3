@@ -2,8 +2,10 @@ package com.sele3.waits;
 
 import com.sele3.driver.DriverManager;
 import com.sele3.element.Element;
+import org.jspecify.annotations.NonNull;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.TimeoutException;
 
 import java.time.Duration;
 import java.util.List;
@@ -46,33 +48,34 @@ public class ElementWait extends SeleniumWait<Element> {
 
         withTimeout(timeout)
                 .pollingEvery(DriverManager.getConfiguration().getPollingInterval())
-                .ignoreAll(WAIT_EXCEPTIONS)
-                .ignoring(RetryContext.ConditionNotSatisfiedException.class);
+                .ignoreAll(WAIT_EXCEPTIONS);
     }
 
     /**
-     * Repeatedly evaluates the specified condition until it returns a value
-     * other than {@code null} or {@code false}, or the timeout is reached.
+     * Evaluates the condition using this wait's configured timeout.
      *
-     * <p>If an outer polling attempt is already active on the current thread,
-     * the condition is evaluated once without starting another polling loop.
-     * A {@code null} or {@code false} result signals that the outer loop must
-     * try again.</p>
+     * <p>A zero timeout evaluates the condition once without starting a
+     * polling loop. Exceptions from that evaluation propagate unchanged.</p>
      *
      * @param condition condition to evaluate against the element
      * @param <V>       condition result type
      * @return the value returned when the condition is satisfied
-     * @throws org.openqa.selenium.TimeoutException if the timeout is reached,
-     *         or a nested condition returns {@code null} or {@code false}
+     * @throws TimeoutException if the timeout is reached, or a zero-timeout
+     *         condition returns {@code null} or {@code false}
      */
     @Override
-    public <V> V until(Function<? super Element, ? extends V> condition) {
-        if (RetryContext.isActive()) {
-            return RetryContext.requireSatisfied(condition.apply(input));
+    public <V> @NonNull V until(Function<? super Element, ? extends V> condition) {
+        if (timeout.isZero()) {
+            V result = condition.apply(input);
+            if (result == null || Boolean.FALSE.equals(result)) {
+                throw new TimeoutException(
+                        "Element condition was not satisfied in a single attempt (timeout: 0 ms)."
+                );
+            }
+            return result;
         }
 
-        return super.until(value ->
-                RetryContext.evaluate(() -> condition.apply(value)));
+        return super.until(condition);
     }
 
     /**
