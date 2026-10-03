@@ -258,13 +258,13 @@ final class SoftAssertion {
     private void addFailure(String message, Object expected, Object actual, Throwable cause) {
         String details = formatDetails(message, expected, actual);
 
-        reportFailed(details);
-
         AssertionError error = cause == null
                 ? new AssertionError(details)
                 : new AssertionError(details, cause);
 
         errors.add(error);
+
+        reportFailed(details);
     }
 
     /**
