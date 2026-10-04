@@ -7,6 +7,12 @@ on:
 
   workflow_dispatch:
     inputs:
+      suite:
+        description: TestNG suite file
+        required: true
+        default: testng.xml
+        type: string
+
       browser:
         description: Browser
         required: true
@@ -82,6 +88,7 @@ jobs:
       - name: Run tests
         run: >
           mvn clean test
+          -Dsurefire.suiteXmlFiles=${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'testng.xml' }}
           -Dbrowser=${{ github.event_name == 'workflow_dispatch' && inputs.browser || 'chrome' }}
           -Dheadless=${{ github.event_name == 'workflow_dispatch' && inputs.headless || 'true' }}
           -Dreport.provider=${{ github.event_name == 'workflow_dispatch' && inputs.report || 'allure' }}
