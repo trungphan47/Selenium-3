@@ -63,6 +63,9 @@ on:
 permissions:
   contents: read
   packages: write
+  pages: write
+  id-token: write
+  actions: read
 
 jobs:
   test:
@@ -95,13 +98,51 @@ jobs:
           -Dtimeout=${{ github.event_name == 'workflow_dispatch' && inputs.timeout || '60000' }}
           -DpollingInterval=${{ github.event_name == 'workflow_dispatch' && inputs.pollingInterval || '500' }}
 
-      - name: Upload Allure results
-        if: always()
+      - name: Generate Allure HTML report
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
+        run: mvn allure:report
+
+      - name: Upload Allure artifact
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results
-          path: target/reports/allure-reports
+          name: allure-report
+          path: target/site/allure-maven-plugin
           if-no-files-found: ignore
+
+      - name: Upload Extent report
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.report == 'extent'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extent-report
+          path: target/reports/extent-reports
+          if-no-files-found: ignore
+
+      - name: Upload report for GitHub Pages
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/site/allure-maven-plugin
+
+  pages:
+    name: Publish Allure Report
+    needs: test
+
+    if: >
+      always() &&
+      needs.test.result != 'cancelled' &&
+      (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Allure report to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   publish:
     name: CD - Publish Framework Package
