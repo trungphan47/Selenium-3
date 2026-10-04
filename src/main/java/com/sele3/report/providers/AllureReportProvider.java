@@ -77,4 +77,19 @@ public class AllureReportProvider implements ReportProvider {
     public void endTest() {
         // Test lifecycle is managed by TestNG + Allure
     }
+
+    @Override
+    public void testPassed(String message) {
+        // Test status is managed by TestNG + Allure
+    }
+
+    @Override
+    public void testFailed(String message) {
+        // Test status is managed by TestNG + Allure
+    }
+
+    @Override
+    public void testSkipped(String message) {
+        // Test status is managed by TestNG + Allure
+    }
 }

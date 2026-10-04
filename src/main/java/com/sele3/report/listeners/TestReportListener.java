@@ -43,7 +43,7 @@ public class TestReportListener implements ITestListener, ISuiteListener {
     @Override
     public void onTestSuccess(ITestResult result) {
         try {
-            reportProvider.pass(
+            reportProvider.testPassed(
                     "Test passed: " + result.getMethod().getMethodName()
             );
         } finally {
@@ -60,7 +60,7 @@ public class TestReportListener implements ITestListener, ISuiteListener {
     @Override
     public void onTestFailure(ITestResult result) {
         try {
-            reportProvider.fail(
+            reportProvider.testFailed(
                     "Test failed: " + result.getMethod().getMethodName()
             );
         } finally {
@@ -77,7 +77,7 @@ public class TestReportListener implements ITestListener, ISuiteListener {
     @Override
     public void onTestSkipped(ITestResult result) {
         try {
-            reportProvider.step(
+            reportProvider.testSkipped(
                     "Test skipped: " + result.getMethod().getMethodName()
             );
         } finally {

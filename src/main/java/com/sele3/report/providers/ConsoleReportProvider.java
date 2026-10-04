@@ -73,4 +73,35 @@ public class ConsoleReportProvider implements ReportProvider {
     public void endTest() {
         // No cleanup required
     }
+
+    /**
+     * Logs the final passed test result to the console.
+     *
+     * @param message the success message
+     */
+    @Override
+    public void testPassed(String message) {
+        System.out.println("[TEST PASS] " + message);
+    }
+
+    /**
+     * Logs the final failed test result to the console.
+     *
+     * @param message the failure message
+     */
+    @Override
+    public void testFailed(String message) {
+        System.out.println("[TEST FAIL] " + message);
+    }
+
+    /**
+     * Logs the final skipped test result to the console.
+     *
+     * @param message the skipped message
+     */
+    @Override
+    public void testSkipped(String message) {
+        System.out.println("[TEST SKIP] " + message);
+    }
+
 }
