@@ -2,11 +2,14 @@ package com.sele3.waits;
 
 import com.sele3.driver.DriverManager;
 import com.sele3.element.Element;
+import org.jspecify.annotations.NonNull;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.TimeoutException;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Provides wait functionality for {@link Element} instances.
@@ -49,11 +52,39 @@ public class ElementWait extends SeleniumWait<Element> {
     }
 
     /**
+     * Evaluates the condition using this wait's configured timeout.
+     *
+     * <p>A zero timeout evaluates the condition once without starting a
+     * polling loop. Exceptions from that evaluation propagate unchanged.</p>
+     *
+     * @param condition condition to evaluate against the element
+     * @param <V>       condition result type
+     * @return the value returned when the condition is satisfied
+     * @throws TimeoutException if the timeout is reached, or a zero-timeout
+     *         condition returns {@code null} or {@code false}
+     */
+    @Override
+    public <V> @NonNull V until(Function<? super Element, ? extends V> condition) {
+        if (timeout.isZero()) {
+            V result = condition.apply(input);
+            if (result == null || Boolean.FALSE.equals(result)) {
+                throw new TimeoutException(
+                        "Element condition was not satisfied in a single attempt (timeout: 0 ms)."
+                );
+            }
+            return result;
+        }
+
+        return super.until(condition);
+    }
+
+    /**
      * Waits until the specified element condition is satisfied.
      *
      * @param condition condition to evaluate
      */
     public void until(ElementCondition condition) {
-        super.until(condition::matches);
+        Function<Element, Boolean> evaluation = condition::matches;
+        until(evaluation);
     }
 }

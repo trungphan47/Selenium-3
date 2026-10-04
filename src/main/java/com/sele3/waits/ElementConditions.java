@@ -2,6 +2,8 @@ package com.sele3.waits;
 
 import com.sele3.element.Element;
 
+import java.time.Duration;
+
 /**
  * Provides reusable conditions for waiting on {@link Element} states.
  *
@@ -30,7 +32,7 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is visible
      */
     public static ElementCondition visible() {
-        return Element::isDisplayed;
+        return element -> element.isDisplayed(Duration.ZERO);
     }
 
     /**
@@ -42,7 +44,7 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is invisible
      */
     public static ElementCondition invisible() {
-        return element -> !element.isPresent() || !element.isDisplayed();
+        return element -> !element.isPresent() || !element.isDisplayed(Duration.ZERO);
     }
 
     /**
@@ -51,7 +53,7 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is enabled
      */
     public static ElementCondition enabled() {
-        return Element::isEnabled;
+        return element -> element.isEnabled(Duration.ZERO);
     }
 
     /**
@@ -63,7 +65,7 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is disabled
      */
     public static ElementCondition disabled() {
-        return Element::isDisabled;
+        return element -> element.isDisabled(Duration.ZERO);
     }
 
     /**
@@ -72,7 +74,7 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is selected
      */
     public static ElementCondition selected() {
-        return Element::isSelected;
+        return element -> element.isSelected(Duration.ZERO);
     }
 
     /**
@@ -87,8 +89,7 @@ public final class ElementConditions {
      * the expected text
      */
     public static ElementCondition textContains(String expectedText) {
-        return element ->
-                element.getText().contains(expectedText);
+        return element -> element.getText(Duration.ZERO).contains(expectedText);
     }
 
     /**
@@ -103,7 +104,6 @@ public final class ElementConditions {
      * from the specified text
      */
     public static ElementCondition textNotEqual(String text) {
-        return element ->
-                !element.getText().equals(text);
+        return element -> !element.getText(Duration.ZERO).equals(text);
     }
 }
