@@ -76,16 +76,25 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+
                 <configuration>
                     <testFailureIgnore>false</testFailureIgnore>
+
                     <suiteXmlFiles>
-                        <suiteXmlFile>testNG.xml</suiteXmlFile>
+                        <suiteXmlFile>testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
-                    <argLine>-javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"</argLine>
+
+                    <argLine>
+                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+                    </argLine>
+
                     <systemPropertyVariables>
-                        <allure.results.directory>${project.build.directory}/reports/allure-reports</allure.results.directory>
+                        <allure.results.directory>
+                            ${project.build.directory}/reports/allure-reports
+                        </allure.results.directory>
                     </systemPropertyVariables>
                 </configuration>
+
                 <dependencies>
                     <dependency>
                         <groupId>org.aspectj</groupId>
