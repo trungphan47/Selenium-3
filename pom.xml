@@ -90,7 +90,7 @@
 
                     <systemPropertyVariables>
                         <allure.results.directory>
-                            ${project.build.directory}/reports/allure-reports
+                            ${project.build.directory}/allure-results
                         </allure.results.directory>
                     </systemPropertyVariables>
                 </configuration>
