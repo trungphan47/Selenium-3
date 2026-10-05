@@ -68,8 +68,45 @@ permissions:
   actions: read
 
 jobs:
+
+  # =========================================================
+  # PULL REQUEST - BUILD CHECK ONLY
+  # =========================================================
+  build:
+    name: CI - Build Check
+
+    if: github.event_name == 'pull_request'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Verify environment
+        run: |
+          java -version
+          mvn -version
+
+      - name: Build without running tests
+        run: mvn clean package -DskipTests
+
+
+  # =========================================================
+  # MANUAL - RUN TESTS
+  # =========================================================
   test:
     name: CI - Run Tests
+
+    if: github.event_name == 'workflow_dispatch'
+
     runs-on: ubuntu-latest
 
     steps:
@@ -91,50 +128,69 @@ jobs:
       - name: Run tests
         run: >
           mvn clean test
-          -Dsurefire.suiteXmlFiles=${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'testng.xml' }}
-          -Dbrowser=${{ github.event_name == 'workflow_dispatch' && inputs.browser || 'chrome' }}
-          -Dheadless=${{ github.event_name == 'workflow_dispatch' && inputs.headless || 'true' }}
-          -Dreport.provider=${{ github.event_name == 'workflow_dispatch' && inputs.report || 'allure' }}
-          -Dtimeout=${{ github.event_name == 'workflow_dispatch' && inputs.timeout || '60000' }}
-          -DpollingInterval=${{ github.event_name == 'workflow_dispatch' && inputs.pollingInterval || '500' }}
+          -Dsurefire.suiteXmlFiles=${{ inputs.suite }}
+          -Dbrowser=${{ inputs.browser }}
+          -Dheadless=${{ inputs.headless }}
+          -Dreport.provider=${{ inputs.report }}
+          -Dtimeout=${{ inputs.timeout }}
+          -DpollingInterval=${{ inputs.pollingInterval }}
 
+      # Always keep raw test results, even when tests fail
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            target/surefire-reports
+            target/test-output
+          if-no-files-found: ignore
+
+      # Allure
       - name: Generate Allure HTML report
-        if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
+        if: always() && inputs.report == 'allure'
         run: |
           mvn allure:report
           find target -type f -name index.html
           test -s target/site/allure-maven-plugin/index.html
 
       - name: Upload Allure artifact
-        if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
+        if: always() && inputs.report == 'allure'
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: target/site/allure-maven-plugin
           if-no-files-found: ignore
 
+      - name: Upload report for GitHub Pages
+        if: always() && inputs.report == 'allure'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/site/allure-maven-plugin
+
+      # Extent
       - name: Upload Extent report
-        if: always() && github.event_name == 'workflow_dispatch' && inputs.report == 'extent'
+        if: always() && inputs.report == 'extent'
         uses: actions/upload-artifact@v4
         with:
           name: extent-report
           path: target/reports/extent-reports
           if-no-files-found: ignore
 
-      - name: Upload report for GitHub Pages
-        if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: target/site/allure-maven-plugin
 
+  # =========================================================
+  # PUBLISH ALLURE TO GITHUB PAGES
+  # =========================================================
   pages:
     name: Publish Allure Report
+
     needs: test
 
     if: >
       always() &&
+      github.event_name == 'workflow_dispatch' &&
       needs.test.result != 'cancelled' &&
-      (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
+      inputs.report == 'allure'
 
     environment:
       name: github-pages
@@ -147,8 +203,13 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+
+  # =========================================================
+  # OPTIONAL - PUBLISH FRAMEWORK PACKAGE
+  # =========================================================
   publish:
     name: CD - Publish Framework Package
+
     needs: test
 
     if: >
