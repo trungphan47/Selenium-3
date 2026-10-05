@@ -67,13 +67,25 @@ public class ElementWait extends SeleniumWait<Element> {
     public <V> @NonNull V until(Function<? super Element, ? extends V> condition) {
         if (timeout.isZero()) {
             V result = condition.apply(input);
+
             if (result == null || Boolean.FALSE.equals(result)) {
                 throw new TimeoutException(
-                        "Element condition was not satisfied in a single attempt (timeout: 0 ms)."
+                        "Element condition was not satisfied in a single attempt"
+                                + " (timeout: 0 ms)."
+                                + "\nCondition: " + condition
+                                + "\nLocator: " + input
                 );
             }
+
             return result;
         }
+
+        withMessage(() ->
+                "Element condition was not satisfied within "
+                        + timeout.toMillis() + " ms."
+                        + "\nCondition: " + condition
+                        + "\nLocator: " + input
+        );
 
         return super.until(condition);
     }
@@ -84,7 +96,19 @@ public class ElementWait extends SeleniumWait<Element> {
      * @param condition condition to evaluate
      */
     public void until(ElementCondition condition) {
-        Function<Element, Boolean> evaluation = condition::matches;
+        Function<Element, Boolean> evaluation = new Function<>() {
+
+            @Override
+            public Boolean apply(Element element) {
+                return condition.matches(element);
+            }
+
+            @Override
+            public String toString() {
+                return condition.description();
+            }
+        };
+
         until(evaluation);
     }
 }
