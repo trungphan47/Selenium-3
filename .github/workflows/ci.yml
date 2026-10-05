@@ -100,7 +100,10 @@ jobs:
 
       - name: Generate Allure HTML report
         if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
-        run: mvn allure:report
+        run: |
+          mvn allure:report
+          find target -type f -name index.html
+          test -s target/site/allure-maven-plugin/index.html
 
       - name: Upload Allure artifact
         if: always() && (github.event_name != 'workflow_dispatch' || inputs.report == 'allure')
