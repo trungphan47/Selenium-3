@@ -21,6 +21,9 @@ import org.testng.ITestResult;
 @AutoService(ITestNGListener.class)
 public class TestReportListener implements ITestListener, ISuiteListener {
 
+    private static final String REPORT_STARTED =
+            TestReportListener.class.getName() + ".reportStarted";
+
     private final ReportProvider reportProvider = ReportManager.getProvider();
 
     /**
@@ -30,8 +33,8 @@ public class TestReportListener implements ITestListener, ISuiteListener {
      */
     @Override
     public void onTestStart(ITestResult result) {
-        reportProvider.startTest(result.getMethod().getMethodName()
-        );
+        reportProvider.startTest(result.getMethod().getMethodName());
+        result.setAttribute(REPORT_STARTED, Boolean.TRUE);
     }
 
     /**
@@ -47,7 +50,11 @@ public class TestReportListener implements ITestListener, ISuiteListener {
                     "Test passed: " + result.getMethod().getMethodName()
             );
         } finally {
-            reportProvider.endTest();
+            try {
+                reportProvider.endTest();
+            } finally {
+                result.removeAttribute(REPORT_STARTED);
+            }
         }
     }
 
@@ -64,7 +71,11 @@ public class TestReportListener implements ITestListener, ISuiteListener {
                     "Test failed: " + result.getMethod().getMethodName()
             );
         } finally {
-            reportProvider.endTest();
+            try {
+                reportProvider.endTest();
+            } finally {
+                result.removeAttribute(REPORT_STARTED);
+            }
         }
     }
 
@@ -77,11 +88,20 @@ public class TestReportListener implements ITestListener, ISuiteListener {
     @Override
     public void onTestSkipped(ITestResult result) {
         try {
+            if (!Boolean.TRUE.equals(result.getAttribute(REPORT_STARTED))) {
+                reportProvider.startTest(result.getMethod().getMethodName());
+                result.setAttribute(REPORT_STARTED, Boolean.TRUE);
+            }
+
             reportProvider.testSkipped(
                     "Test skipped: " + result.getMethod().getMethodName()
             );
         } finally {
-            reportProvider.endTest();
+            try {
+                reportProvider.endTest();
+            } finally {
+                result.removeAttribute(REPORT_STARTED);
+            }
         }
     }
 

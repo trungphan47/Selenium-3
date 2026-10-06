@@ -6,6 +6,7 @@ import org.openqa.selenium.PageLoadStrategy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
@@ -28,7 +29,7 @@ public final class ConfigLoader {
 
         Configuration configuration = new Configuration();
 
-        configuration.setPlatform(getBrowser(properties));
+        configuration.setPlatform(getProperty(properties, "platform", "chrome"));
         configuration.setHeadless(Boolean.parseBoolean(getProperty(properties, "headless", "false")));
         configuration.setRemote(Boolean.parseBoolean(getProperty(properties, "remote", "false")));
         configuration.setRemoteUrl(getProperty(properties, "remoteUrl", null));
@@ -45,37 +46,22 @@ public final class ConfigLoader {
     }
 
     /**
-     * Returns a configuration value using the following priority:
+     * Returns a trimmed configuration value using the following priority:
      * system property, properties file, and default value.
      *
      * @param properties configuration properties
      * @param key property key
      * @param defaultValue default value
-     * @return resolved property value
+     * @return trimmed property value, or {@code null} if no value is configured
      */
     private static String getProperty(Properties properties, String key, String defaultValue) {
-        String systemValue = System.getProperty(key);
+        String value = System.getProperty(key);
 
-        if (systemValue != null) {
-            return systemValue;
+        if (value == null) {
+            value = properties.getProperty(key, defaultValue);
         }
 
-        return properties.getProperty(key, defaultValue);
-    }
-
-    /**
-     * Returns the configured browser.
-     *
-     * <p>The "browser" system property is used as a command-line alias
-     * for the existing "platform" configuration property.</p>
-     *
-     * @param properties configuration properties
-     * @return configured browser
-     */
-    private static String getBrowser(Properties properties) {
-        String configuredBrowser = getProperty(properties, "platform", "chrome");
-
-        return System.getProperty("browser", configuredBrowser);
+        return value == null ? null : value.trim();
     }
 
     /**
@@ -118,7 +104,7 @@ public final class ConfigLoader {
         String value = getProperty(properties, "pageLoadStrategy", "NORMAL");
 
         try {
-            return PageLoadStrategy.valueOf(value.trim().toUpperCase());
+            return PageLoadStrategy.valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(
                     "Invalid pageLoadStrategy: " + value,
@@ -128,39 +114,41 @@ public final class ConfigLoader {
     }
 
     /**
-     * Loads Selenium capabilities from the properties file and
-     * command-line system properties.
+     * Loads only {@code capabilities.*} entries from the configuration file
+     * and system properties. System properties override file values.
      *
      * @param properties configuration properties
      * @return Selenium capabilities
      */
     private static MutableCapabilities loadCapabilities(Properties properties) {
-        Properties capabilityProperties = new Properties();
-        capabilityProperties.putAll(properties);
-
-        for (Map.Entry<Object, Object> entry : System.getProperties().entrySet()) {
-            String key = entry.getKey().toString();
-
-            if (key.startsWith("capabilities.")) {
-                capabilityProperties.put(key, entry.getValue());
-            }
-        }
-
         MutableCapabilities capabilities = new MutableCapabilities();
 
-        for (Map.Entry<Object, Object> entry : capabilityProperties.entrySet()) {
+        addCapabilities(capabilities, properties);
+        addCapabilities(capabilities, System.getProperties());
+
+        return capabilities;
+    }
+
+    /**
+     * Applies only {@code capabilities.*} entries from the supplied properties.
+     *
+     * @param capabilities destination Selenium capabilities
+     * @param properties source properties
+     */
+    private static void addCapabilities(MutableCapabilities capabilities, Properties properties) {
+        String prefix = "capabilities.";
+
+        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             String key = entry.getKey().toString();
 
-            if (key.startsWith("capabilities.")) {
-                String capabilityName = key.substring("capabilities.".length());
+            if (key.startsWith(prefix)) {
+                Object value = entry.getValue();
 
                 capabilities.setCapability(
-                        capabilityName,
-                        entry.getValue()
+                        key.substring(prefix.length()),
+                        value instanceof String ? ((String) value).trim() : value
                 );
             }
         }
-
-        return capabilities;
     }
 }
