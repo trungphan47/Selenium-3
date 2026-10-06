@@ -9,8 +9,8 @@ on:
         default: testng.xml
         type: string
 
-      browser:
-        description: Browser
+      platform:
+        description: Platform
         required: true
         default: chrome
         type: choice
@@ -94,7 +94,7 @@ jobs:
         run: >
           mvn clean test
           -Dsurefire.suiteXmlFiles=${{ inputs.suite }}
-          -Dbrowser=${{ inputs.browser }}
+          -Dplatform=${{ inputs.platform }}
           -Dheadless=${{ inputs.headless }}
           -Dreport.provider=${{ inputs.report }}
           -Dtimeout=${{ inputs.timeout }}
