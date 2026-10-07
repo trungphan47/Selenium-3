@@ -13,7 +13,8 @@ import org.testng.ITestResult;
  * and clears the assertion state associated with the current thread.</p>
  */
 @AutoService(ITestNGListener.class)
-public class TestNgAssertionListener implements IInvokedMethodListener, AssertionLifecycle {
+public class TestNgAssertionListener
+        implements IInvokedMethodListener, AssertionLifecycle {
 
     /**
      * Completes soft assertion verification after a TestNG test method.
@@ -23,8 +24,22 @@ public class TestNgAssertionListener implements IInvokedMethodListener, Assertio
      */
     @Override
     public void afterInvocation(IInvokedMethod method, ITestResult result) {
-        if (method.isTestMethod()) {
+        if (!method.isTestMethod()) {
+            return;
+        }
+
+        try {
             afterTest();
+        } catch (AssertionError assertionError) {
+            Throwable originalFailure = result.getThrowable();
+
+            if (originalFailure == null) {
+                result.setThrowable(assertionError);
+            } else if (originalFailure != assertionError) {
+                originalFailure.addSuppressed(assertionError);
+            }
+
+            result.setStatus(ITestResult.FAILURE);
         }
     }
 }

@@ -26,6 +26,8 @@ public class ElementWait extends SeleniumWait<Element> {
                     StaleElementReferenceException.class
             );
 
+    private Function<? super Element, ?> currentCondition;
+
     /**
      * Creates an element wait using the configured default timeout
      * and polling interval.
@@ -49,6 +51,16 @@ public class ElementWait extends SeleniumWait<Element> {
         withTimeout(timeout)
                 .pollingEvery(DriverManager.getConfiguration().getPollingInterval())
                 .ignoreAll(WAIT_EXCEPTIONS);
+
+        withMessage(() ->
+                (this.timeout.isZero()
+                        ? "Element condition was not satisfied in a single attempt"
+                        + " (timeout: 0 ms)."
+                        : "Element condition was not satisfied within "
+                        + this.timeout.toMillis() + " ms.")
+                        + "\nCondition: " + currentCondition
+                        + "\nLocator: " + input
+        );
     }
 
     /**
@@ -65,17 +77,23 @@ public class ElementWait extends SeleniumWait<Element> {
      */
     @Override
     public <V> @NonNull V until(Function<? super Element, ? extends V> condition) {
-        if (timeout.isZero()) {
-            V result = condition.apply(input);
-            if (result == null || Boolean.FALSE.equals(result)) {
-                throw new TimeoutException(
-                        "Element condition was not satisfied in a single attempt (timeout: 0 ms)."
-                );
-            }
-            return result;
-        }
+        currentCondition = condition;
 
-        return super.until(condition);
+        try {
+            if (timeout.isZero()) {
+                V result = condition.apply(input);
+
+                if (result == null || Boolean.FALSE.equals(result)) {
+                    throw new TimeoutException(messageSupplier.get());
+                }
+
+                return result;
+            }
+
+            return super.until(condition);
+        } finally {
+            currentCondition = null;
+        }
     }
 
     /**
@@ -84,7 +102,19 @@ public class ElementWait extends SeleniumWait<Element> {
      * @param condition condition to evaluate
      */
     public void until(ElementCondition condition) {
-        Function<Element, Boolean> evaluation = condition::matches;
+        Function<Element, Boolean> evaluation = new Function<>() {
+
+            @Override
+            public Boolean apply(Element element) {
+                return condition.matches(element);
+            }
+
+            @Override
+            public String toString() {
+                return condition.description();
+            }
+        };
+
         until(evaluation);
     }
 }

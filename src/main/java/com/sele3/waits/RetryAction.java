@@ -63,10 +63,47 @@ public final class RetryAction {
             Duration pollingInterval,
             List<Class<? extends Throwable>> exceptions
     ) {
+        retry(
+                action,
+                timeout,
+                pollingInterval,
+                exceptions,
+                () -> "Wait for condition to be satisfied"
+        );
+    }
+
+    /**
+     * Repeatedly executes the specified action until it succeeds
+     * or the specified timeout is reached.
+     *
+     * <p>The failure description is evaluated only when the condition
+     * is not satisfied within the timeout. It may include the operation,
+     * element locator, and last observed state.</p>
+     *
+     * <p>A zero timeout evaluates the action once. Exceptions from
+     * that evaluation propagate unchanged.</p>
+     *
+     * @param action             action to execute
+     * @param timeout            maximum time to retry the action
+     * @param pollingInterval    interval between retry attempts
+     * @param exceptions         exceptions to ignore while retrying
+     * @param failureDescription supplier of contextual failure details
+     * @throws TimeoutException if the condition is not satisfied
+     *                          within the specified timeout
+     */
+    public static void retry(
+            Supplier<Boolean> action,
+            Duration timeout,
+            Duration pollingInterval,
+            List<Class<? extends Throwable>> exceptions,
+            Supplier<String> failureDescription
+    ) {
         if (timeout.isZero()) {
             if (!Boolean.TRUE.equals(action.get())) {
                 throw new TimeoutException(
-                        "Condition was not satisfied in a single attempt (timeout: 0 ms)."
+                        failureDescription.get()
+                                + ". Condition was not satisfied in a single attempt"
+                                + " (timeout: 0 ms)."
                 );
             }
             return;
@@ -78,6 +115,11 @@ public final class RetryAction {
         wait.withTimeout(timeout)
                 .pollingEvery(pollingInterval)
                 .ignoreAll(exceptions)
+                .withMessage(() ->
+                        failureDescription.get()
+                                + ". Condition was not satisfied within "
+                                + timeout.toMillis() + " ms."
+                )
                 .until(ignored -> action.get());
     }
 
@@ -137,6 +179,53 @@ public final class RetryAction {
     }
 
     /**
+     * Executes a value operation with automatic retry and contextual
+     * failure details.
+     *
+     * <p>The configured polling interval is used. The operation is
+     * retried when one of the specified exceptions is thrown.
+     * Any returned value, including {@code null}, {@code false},
+     * or an empty string, is considered successful.</p>
+     *
+     * <p>A zero timeout executes the operation once and propagates
+     * its exception unchanged.</p>
+     *
+     * @param action             operation that returns a value
+     * @param timeout            maximum time to retry the operation
+     * @param exceptions         exceptions to ignore while retrying
+     * @param failureDescription supplier of contextual failure details
+     * @param <T>                returned value type
+     * @return value returned by the successfully executed operation
+     * @throws TimeoutException if the operation keeps throwing ignored
+     *                          exceptions until the timeout is reached
+     */
+    public static <T> T retryForValue(
+            Supplier<T> action,
+            Duration timeout,
+            List<Class<? extends Throwable>> exceptions,
+            Supplier<String> failureDescription
+    ) {
+        if (timeout.isZero()) {
+            return action.get();
+        }
+
+        AtomicReference<T> result = new AtomicReference<>();
+
+        retry(
+                () -> {
+                    result.set(action.get());
+                    return true;
+                },
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval(),
+                exceptions,
+                failureDescription
+        );
+
+        return result.get();
+    }
+
+    /**
      * Executes an operation that returns a value with automatic retry.
      *
      * <p>The operation is retried when one of the specified exceptions
@@ -144,7 +233,7 @@ public final class RetryAction {
      * {@code false}, or an empty string, is considered successful.</p>
      *
      * @param action          operation that returns a value
-     * @param timeout         maximum time to retry the operation
+     * @param timeout         maximum time to retry the action
      * @param pollingInterval interval between retry attempts
      * @param exceptions      exceptions to ignore while retrying
      * @param <T>             returned value type
@@ -174,7 +263,6 @@ public final class RetryAction {
 
         return result.get();
     }
-
 
     /**
      * Repeatedly executes the specified action using the configured

@@ -23,7 +23,10 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is present
      */
     public static ElementCondition present() {
-        return Element::isPresent;
+        return described(
+                "Element is present in the DOM",
+                Element::isPresent
+        );
     }
 
     /**
@@ -32,7 +35,10 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is visible
      */
     public static ElementCondition visible() {
-        return element -> element.isDisplayed(Duration.ZERO);
+        return described(
+                "Element is visible",
+                element -> element.isDisplayed(Duration.ZERO)
+        );
     }
 
     /**
@@ -44,7 +50,11 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is invisible
      */
     public static ElementCondition invisible() {
-        return element -> !element.isPresent() || !element.isDisplayed(Duration.ZERO);
+        return described(
+                "Element is invisible or absent from the DOM",
+                element -> !element.isPresent()
+                        || !element.isDisplayed(Duration.ZERO)
+        );
     }
 
     /**
@@ -53,7 +63,10 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is enabled
      */
     public static ElementCondition enabled() {
-        return element -> element.isEnabled(Duration.ZERO);
+        return described(
+                "Element is enabled",
+                element -> element.isEnabled(Duration.ZERO)
+        );
     }
 
     /**
@@ -65,7 +78,10 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is disabled
      */
     public static ElementCondition disabled() {
-        return element -> element.isDisabled(Duration.ZERO);
+        return described(
+                "Element is disabled",
+                element -> element.isDisabled(Duration.ZERO)
+        );
     }
 
     /**
@@ -74,7 +90,10 @@ public final class ElementConditions {
      * @return condition that is satisfied when the element is selected
      */
     public static ElementCondition selected() {
-        return element -> element.isSelected(Duration.ZERO);
+        return described(
+                "Element is selected",
+                element -> element.isSelected(Duration.ZERO)
+        );
     }
 
     /**
@@ -89,7 +108,10 @@ public final class ElementConditions {
      * the expected text
      */
     public static ElementCondition textContains(String expectedText) {
-        return element -> element.getText(Duration.ZERO).contains(expectedText);
+        return described(
+                "Element text contains \"" + expectedText + "\"",
+                element -> element.getText(Duration.ZERO).contains(expectedText)
+        );
     }
 
     /**
@@ -104,6 +126,34 @@ public final class ElementConditions {
      * from the specified text
      */
     public static ElementCondition textNotEqual(String text) {
-        return element -> !element.getText(Duration.ZERO).equals(text);
+        return described(
+                "Element text is different from \"" + text + "\"",
+                element -> !element.getText(Duration.ZERO).equals(text)
+        );
+    }
+
+    /**
+     * Wraps an element condition with a description for timeout messages.
+     *
+     * @param description expected condition description
+     * @param condition   condition to evaluate
+     * @return condition with the supplied description
+     */
+    private static ElementCondition described(
+            String description,
+            ElementCondition condition
+    ) {
+        return new ElementCondition() {
+
+            @Override
+            public boolean matches(Element element) {
+                return condition.matches(element);
+            }
+
+            @Override
+            public String description() {
+                return description;
+            }
+        };
     }
 }

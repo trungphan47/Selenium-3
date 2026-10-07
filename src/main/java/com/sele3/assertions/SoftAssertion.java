@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -159,20 +160,34 @@ final class SoftAssertion {
      * @param message        failure message
      * @param <T>            value type
      */
-    <T> void assertEquals(Supplier<T> actualSupplier, T expected, Duration timeout, String message) {
+    <T> void assertEquals(
+            Supplier<T> actualSupplier,
+            T expected,
+            Duration timeout,
+            String message
+    ) {
         AtomicReference<T> lastActual = new AtomicReference<>();
+        AtomicBoolean actualRetrieved = new AtomicBoolean(false);
 
         Supplier<Boolean> comparison = () -> {
             T actual = actualSupplier.get();
             lastActual.set(actual);
+            actualRetrieved.set(true);
             return Objects.deepEquals(actual, expected);
         };
 
         try {
-            retry(comparison, timeout);
+            retry(comparison, timeout, message);
             reportPassed(message, expected, lastActual.get());
         } catch (TimeoutException e) {
-            addFailure(message, expected, lastActual.get(), e);
+            addRetryFailure(
+                    message,
+                    expected,
+                    lastActual.get(),
+                    actualRetrieved.get(),
+                    timeout,
+                    e
+            );
         }
     }
 
@@ -193,9 +208,19 @@ final class SoftAssertion {
         List<AssertionError> failures = List.copyOf(errors);
         errors.clear();
 
-        AssertionError aggregatedError = new AssertionError(
+        StringBuilder details = new StringBuilder(
                 message + " Total failed checkpoints: " + failures.size()
         );
+
+        for (int i = 0; i < failures.size(); i++) {
+            details.append("\n\n")
+                    .append(i + 1)
+                    .append(") ")
+                    .append(failures.get(i).getMessage());
+        }
+
+        AssertionError aggregatedError =
+                new AssertionError(details.toString());
 
         failures.forEach(aggregatedError::addSuppressed);
 
@@ -211,20 +236,34 @@ final class SoftAssertion {
      * @param timeout   maximum time to wait
      * @param message   failure message
      */
-    private void assertBoolean(Supplier<Boolean> condition, boolean expected, Duration timeout, String message) {
+    private void assertBoolean(
+            Supplier<Boolean> condition,
+            boolean expected,
+            Duration timeout,
+            String message
+    ) {
         AtomicReference<Boolean> lastActual = new AtomicReference<>();
+        AtomicBoolean actualRetrieved = new AtomicBoolean(false);
 
         Supplier<Boolean> comparison = () -> {
             Boolean actual = condition.get();
             lastActual.set(actual);
+            actualRetrieved.set(true);
             return Objects.equals(actual, expected);
         };
 
         try {
-            retry(comparison, timeout);
+            retry(comparison, timeout, message);
             reportPassed(message, expected, lastActual.get());
         } catch (TimeoutException e) {
-            addFailure(message, expected, lastActual.get(), e);
+            addRetryFailure(
+                    message,
+                    expected,
+                    lastActual.get(),
+                    actualRetrieved.get(),
+                    timeout,
+                    e
+            );
         }
     }
 
@@ -234,8 +273,13 @@ final class SoftAssertion {
      *
      * @param condition condition to evaluate
      * @param timeout   maximum time to wait
+     * @param message   assertion description for timeout messages
      */
-    private void retry(Supplier<Boolean> condition, Duration timeout) {
+    private void retry(
+            Supplier<Boolean> condition,
+            Duration timeout,
+            String message
+    ) {
         RetryAction.retry(
                 condition,
                 timeout,
@@ -243,7 +287,8 @@ final class SoftAssertion {
                 List.of(
                         NoSuchElementException.class,
                         StaleElementReferenceException.class
-                )
+                ),
+                () -> "Evaluate assertion: " + message
         );
     }
 
@@ -255,12 +300,55 @@ final class SoftAssertion {
      * @param actual   actual value
      * @param cause    failure cause, or {@code null} when no cause is available
      */
-    private void addFailure(String message, Object expected, Object actual, Throwable cause) {
+    private void addFailure(
+            String message,
+            Object expected,
+            Object actual,
+            Throwable cause
+    ) {
         String details = formatDetails(message, expected, actual);
 
         AssertionError error = cause == null
                 ? new AssertionError(details)
                 : new AssertionError(details, cause);
+
+        errors.add(error);
+
+        reportFailed(details);
+    }
+
+    /**
+     * Creates and stores a retry assertion failure with the configured
+     * timeout and the last successfully retrieved actual value.
+     *
+     * <p>If no evaluation returned a value, the actual value is reported
+     * as {@code <not retrieved>}. A successfully retrieved {@code null}
+     * value remains {@code null}.</p>
+     *
+     * @param message         assertion message
+     * @param expected        expected value
+     * @param lastActual      last successfully retrieved actual value
+     * @param actualRetrieved whether any evaluation returned an actual value
+     * @param timeout         configured assertion timeout
+     * @param cause           failure cause
+     */
+    private void addRetryFailure(
+            String message,
+            Object expected,
+            Object lastActual,
+            boolean actualRetrieved,
+            Duration timeout,
+            Throwable cause
+    ) {
+        String details = String.format(
+                "%s%nTimeout: %d ms%nExpected: %s%nLast actual: %s",
+                message,
+                timeout.toMillis(),
+                expected,
+                actualRetrieved ? lastActual : "<not retrieved>"
+        ).trim();
+
+        AssertionError error = new AssertionError(details, cause);
 
         errors.add(error);
 
@@ -292,7 +380,9 @@ final class SoftAssertion {
      * @param actual   actual value
      */
     private void reportPassed(String message, Object expected, Object actual) {
-        ReportManager.getProvider().pass("Assertion Passed: " + formatDetails(message, expected, actual));
+        ReportManager.getProvider().pass(
+                "Assertion Passed: " + formatDetails(message, expected, actual)
+        );
     }
 
     /**

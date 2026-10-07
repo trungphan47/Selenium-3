@@ -78,4 +78,21 @@ public abstract class BaseElement {
      * Clears the element value.
      */
     public abstract void clear();
+
+    /**
+     * Returns the locator path used to identify this element.
+     *
+     * <p>For nested elements, the path includes all parent locators
+     * from the root element to this element.</p>
+     *
+     * @return locator description including the parent hierarchy
+     */
+    @Override
+    public String toString() {
+        if (parent == null) {
+            return locator.toString();
+        }
+
+        return parent + " -> " + locator;
+    }
 }

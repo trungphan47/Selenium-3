@@ -16,6 +16,7 @@ import org.openqa.selenium.WebElement;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
@@ -111,10 +112,10 @@ public class Element extends BaseElement {
      * @param timeout maximum time to retry the interaction
      */
     public void click(Duration timeout) {
-        RetryAction.retry(
-                () -> performWhenInteractable(this::performClick),
+        retryInteraction(
+                "Click element",
+                this::performClick,
                 timeout,
-                DriverManager.getConfiguration().getPollingInterval(),
                 CLICK_EXCEPTIONS
         );
     }
@@ -142,12 +143,10 @@ public class Element extends BaseElement {
      * @param keys    keys to send
      */
     public void sendKeys(Duration timeout, CharSequence... keys) {
-        RetryAction.retry(
-                () -> performWhenInteractable(
-                        element -> element.sendKeys(keys)
-                ),
+        retryInteraction(
+                "Send keys to element",
+                element -> element.sendKeys(keys),
                 timeout,
-                DriverManager.getConfiguration().getPollingInterval(),
                 INPUT_EXCEPTIONS
         );
     }
@@ -172,10 +171,10 @@ public class Element extends BaseElement {
      * @param timeout maximum time to retry the interaction
      */
     public void clear(Duration timeout) {
-        RetryAction.retry(
-                () -> performWhenInteractable(WebElement::clear),
+        retryInteraction(
+                "Clear element",
+                WebElement::clear,
                 timeout,
-                DriverManager.getConfiguration().getPollingInterval(),
                 INPUT_EXCEPTIONS
         );
     }
@@ -206,10 +205,10 @@ public class Element extends BaseElement {
         return RetryAction.retryForValue(
                 () -> findElement().getText(),
                 timeout,
-                READ_EXCEPTIONS
+                READ_EXCEPTIONS,
+                () -> "Read element text. Locator: " + this
         );
     }
-
 
     /**
      * Returns whether the element is currently present in the DOM.
@@ -273,7 +272,8 @@ public class Element extends BaseElement {
                     () -> findElement().isDisplayed(),
                     timeout,
                     DriverManager.getConfiguration().getPollingInterval(),
-                    READ_EXCEPTIONS
+                    READ_EXCEPTIONS,
+                    () -> "Wait for element to be displayed. Locator: " + this
             );
 
             return true;
@@ -311,7 +311,8 @@ public class Element extends BaseElement {
         return RetryAction.retryForValue(
                 () -> findElement().isEnabled(),
                 timeout,
-                READ_EXCEPTIONS
+                READ_EXCEPTIONS,
+                () -> "Read element enabled state. Locator: " + this
         );
     }
 
@@ -344,7 +345,8 @@ public class Element extends BaseElement {
         return RetryAction.retryForValue(
                 () -> findElement().isSelected(),
                 timeout,
-                READ_EXCEPTIONS
+                READ_EXCEPTIONS,
+                () -> "Read element selected state. Locator: " + this
         );
     }
 
@@ -373,6 +375,35 @@ public class Element extends BaseElement {
     }
 
     /**
+     * Retries an interaction and includes the locator and latest
+     * attempt details in the timeout message.
+     *
+     * @param operation  description of the interaction
+     * @param action     action to perform on the Selenium element
+     * @param timeout    maximum time to retry the interaction
+     * @param exceptions exceptions to ignore while retrying
+     */
+    private void retryInteraction(
+            String operation,
+            Consumer<WebElement> action,
+            Duration timeout,
+            List<Class<? extends Throwable>> exceptions
+    ) {
+        AtomicReference<String> lastState =
+                new AtomicReference<>("Not evaluated");
+
+        RetryAction.retry(
+                () -> performWhenInteractable(action, lastState),
+                timeout,
+                DriverManager.getConfiguration().getPollingInterval(),
+                exceptions,
+                () -> operation
+                        + ". Locator: " + this
+                        + ". Last attempt: " + lastState.get()
+        );
+    }
+
+    /**
      * Finds the element and performs an action when it is both
      * displayed and enabled.
      *
@@ -380,20 +411,44 @@ public class Element extends BaseElement {
      * Selenium element reference is obtained on every attempt.</p>
      *
      * @param action action to perform on the Selenium element
+     * @param lastState stores details from the latest interaction attempt
      * @return {@code true} if the action was performed;
      * otherwise {@code false}
      */
     private boolean performWhenInteractable(
-            Consumer<WebElement> action
+            Consumer<WebElement> action,
+            AtomicReference<String> lastState
     ) {
-        WebElement element = findElement();
+        lastState.set("Element state not retrieved");
 
-        if (!element.isDisplayed() || !element.isEnabled()) {
-            return false;
+        try {
+            WebElement element = findElement();
+
+            boolean displayed = element.isDisplayed();
+            lastState.set("displayed=" + displayed + ", enabled=<not retrieved>");
+
+            // Preserve the existing short-circuit behavior for hidden elements.
+            if (!displayed) {
+                return false;
+            }
+
+            boolean enabled = element.isEnabled();
+            String state = "displayed=" + displayed + ", enabled=" + enabled;
+            lastState.set(state);
+
+            if (!enabled) {
+                return false;
+            }
+
+            lastState.set(state + ", performing interaction");
+            action.accept(element);
+            return true;
+        } catch (RuntimeException e) {
+            lastState.set(
+                    lastState.get() + ", exception=" + e.getClass().getSimpleName()
+            );
+            throw e;
         }
-
-        action.accept(element);
-        return true;
     }
 
     /**
@@ -455,7 +510,8 @@ public class Element extends BaseElement {
         return RetryAction.retryForValue(
                 () -> !findElement().isEnabled(),
                 timeout,
-                READ_EXCEPTIONS
+                READ_EXCEPTIONS,
+                () -> "Read element disabled state. Locator: " + this
         );
     }
 }
