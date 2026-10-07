@@ -1,0 +1,33 @@
+name: Sele3 PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: CI - Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Verify environment
+        run: |
+          java -version
+          mvn -version
+
+      - name: Build without running tests
+        run: mvn clean package -DskipTests

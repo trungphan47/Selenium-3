@@ -1,0 +1,215 @@
+name: Sele3 CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: TestNG suite file
+        required: true
+        default: testng.xml
+        type: string
+
+      platform:
+        description: Platform
+        required: true
+        default: chrome
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - edge
+
+      headless:
+        description: Headless mode
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+      report:
+        description: Report provider
+        required: true
+        default: allure
+        type: choice
+        options:
+          - allure
+          - extent
+          - console
+
+      timeout:
+        description: Timeout in milliseconds
+        required: true
+        default: '60000'
+        type: string
+
+      pollingInterval:
+        description: Polling interval in milliseconds
+        required: true
+        default: '500'
+        type: string
+
+      publishPackage:
+        description: Publish framework package
+        required: true
+        default: false
+        type: boolean
+
+
+permissions:
+  contents: read
+  packages: write
+  pages: write
+  id-token: write
+  actions: read
+
+
+jobs:
+
+  # =========================================================
+  # RUN TESTS
+  # =========================================================
+  test:
+    name: CI - Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Verify environment
+        run: |
+          java -version
+          mvn -version
+
+      - name: Run tests
+        run: >
+          mvn clean test
+          -DsuiteXmlFile="${{ inputs.suite }}"
+          -Dplatform=${{ inputs.platform }}
+          -Dheadless=${{ inputs.headless }}
+          -Dreport.provider=${{ inputs.report }}
+          -Dtimeout=${{ inputs.timeout }}
+          -DpollingInterval=${{ inputs.pollingInterval }}
+
+      # Always upload raw test results
+      # even when test execution fails
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            target/surefire-reports
+            target/test-output
+          if-no-files-found: warn
+
+
+      # =====================================================
+      # ALLURE
+      # =====================================================
+      - name: Generate Allure HTML report
+        if: always() && inputs.report == 'allure'
+        run: |
+          mvn allure:report
+          find target -type f -name index.html
+          test -s target/site/allure-maven-plugin/index.html
+
+      - name: Upload Allure artifact
+        if: always() && inputs.report == 'allure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: target/site/allure-maven-plugin
+          if-no-files-found: warn
+
+      - name: Upload Allure report for GitHub Pages
+        if: always() && inputs.report == 'allure'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/site/allure-maven-plugin
+
+
+      # =====================================================
+      # EXTENT
+      # =====================================================
+      - name: Upload Extent report
+        if: always() && inputs.report == 'extent'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extent-report
+          path: target/reports/extent-reports
+          if-no-files-found: warn
+
+
+  # =========================================================
+  # PUBLISH ALLURE REPORT
+  # =========================================================
+  pages:
+    name: Publish Allure Report
+
+    needs: test
+
+    if: >
+      always() &&
+      needs.test.result != 'cancelled' &&
+      inputs.report == 'allure'
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Allure report to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
+  # =========================================================
+  # PUBLISH FRAMEWORK PACKAGE
+  # =========================================================
+  publish:
+    name: CD - Publish Framework Package
+
+    needs: test
+
+    if: >
+      needs.test.result == 'success' &&
+      inputs.publishPackage == true
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Publish package to GitHub Packages
+        run: >
+          mvn deploy
+          -DskipTests
+          -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/${{ github.repository }}
+
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
