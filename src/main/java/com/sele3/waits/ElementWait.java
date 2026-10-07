@@ -26,6 +26,8 @@ public class ElementWait extends SeleniumWait<Element> {
                     StaleElementReferenceException.class
             );
 
+    private Function<? super Element, ?> currentCondition;
+
     /**
      * Creates an element wait using the configured default timeout
      * and polling interval.
@@ -49,6 +51,16 @@ public class ElementWait extends SeleniumWait<Element> {
         withTimeout(timeout)
                 .pollingEvery(DriverManager.getConfiguration().getPollingInterval())
                 .ignoreAll(WAIT_EXCEPTIONS);
+
+        withMessage(() ->
+                (this.timeout.isZero()
+                        ? "Element condition was not satisfied in a single attempt"
+                        + " (timeout: 0 ms)."
+                        : "Element condition was not satisfied within "
+                        + this.timeout.toMillis() + " ms.")
+                        + "\nCondition: " + currentCondition
+                        + "\nLocator: " + input
+        );
     }
 
     /**
@@ -65,29 +77,23 @@ public class ElementWait extends SeleniumWait<Element> {
      */
     @Override
     public <V> @NonNull V until(Function<? super Element, ? extends V> condition) {
-        if (timeout.isZero()) {
-            V result = condition.apply(input);
+        currentCondition = condition;
 
-            if (result == null || Boolean.FALSE.equals(result)) {
-                throw new TimeoutException(
-                        "Element condition was not satisfied in a single attempt"
-                                + " (timeout: 0 ms)."
-                                + "\nCondition: " + condition
-                                + "\nLocator: " + input
-                );
+        try {
+            if (timeout.isZero()) {
+                V result = condition.apply(input);
+
+                if (result == null || Boolean.FALSE.equals(result)) {
+                    throw new TimeoutException(messageSupplier.get());
+                }
+
+                return result;
             }
 
-            return result;
+            return super.until(condition);
+        } finally {
+            currentCondition = null;
         }
-
-        withMessage(() ->
-                "Element condition was not satisfied within "
-                        + timeout.toMillis() + " ms."
-                        + "\nCondition: " + condition
-                        + "\nLocator: " + input
-        );
-
-        return super.until(condition);
     }
 
     /**
