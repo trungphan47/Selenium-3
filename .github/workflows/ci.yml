@@ -42,13 +42,13 @@ on:
         description: Timeout in milliseconds
         required: true
         default: '60000'
-        type: string
+        type: number
 
       pollingInterval:
         description: Polling interval in milliseconds
         required: true
         default: '500'
-        type: string
+        type: number
 
       publishPackage:
         description: Publish framework package
@@ -120,7 +120,6 @@ jobs:
         if: always() && inputs.report == 'allure'
         run: |
           mvn allure:report
-          find target -type f -name index.html
           test -s target/site/allure-maven-plugin/index.html
 
       - name: Upload Allure artifact
@@ -204,12 +203,6 @@ jobs:
           server-password: GITHUB_TOKEN
 
       - name: Publish package to GitHub Packages
-        run: >
-          mvn deploy
-          -DskipTests
-          -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/${{ github.repository }}
-
+        run: mvn --batch-mode deploy -DskipTests
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

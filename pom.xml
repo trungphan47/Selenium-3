@@ -16,7 +16,13 @@
         <allure.version>2.27.0</allure.version>
         <suiteXmlFile>testng.xml</suiteXmlFile>
     </properties>
-
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/trungphan47/Selenium-3</url>
+        </repository>
+    </distributionManagement>
     <dependencies>
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
