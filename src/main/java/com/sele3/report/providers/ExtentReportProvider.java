@@ -168,4 +168,44 @@ public class ExtentReportProvider implements ReportProvider {
 
         return test;
     }
+
+    /**
+     * Marks the current Extent test as passed.
+     *
+     * @param message the success message
+     */
+    @Override
+    public void testPassed(String message) {
+        currentTest().pass(
+                MarkupHelper.createLabel(
+                        message,
+                        ExtentColor.GREEN
+                )
+        );
+    }
+
+    /**
+     * Marks the current Extent test as failed.
+     *
+     * @param message the failure message
+     */
+    @Override
+    public void testFailed(String message) {
+        currentTest().fail(
+                MarkupHelper.createLabel(
+                        message,
+                        ExtentColor.RED
+                )
+        );
+    }
+
+    /**
+     * Marks the current Extent test as skipped.
+     *
+     * @param message the skipped message
+     */
+    @Override
+    public void testSkipped(String message) {
+        currentTest().skip(message);
+    }
 }

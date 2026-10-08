@@ -24,6 +24,12 @@ public interface ReportProvider {
 
     void fail(String message);
 
+    void testPassed(String message);
+
+    void testFailed(String message);
+
+    void testSkipped(String message);
+
     void attach(String name, byte[] data);
 
     /**
