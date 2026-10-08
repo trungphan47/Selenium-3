@@ -50,12 +50,6 @@ on:
         default: '500'
         type: number
 
-      publishPackage:
-        description: Publish framework package
-        required: true
-        default: false
-        type: boolean
-
 
 permissions:
   contents: read
