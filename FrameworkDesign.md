@@ -1,222 +1,222 @@
+## Architecture
+
 ```mermaid
 classDiagram
     direction TB
 
+    namespace ConfigurationLayer {
+        class ConfigLoader {
+            +load(fileName) Configuration
+        }
+        class Configuration {
+            -String platform
+            -boolean headless
+            -boolean remote
+            -String remoteUrl
+            -String browserSize
+            -boolean startMaximized
+            -PageLoadStrategy pageLoadStrategy
+            -MutableCapabilities capabilities
+            -String baseUrl
+            -Duration timeout
+            -Duration pollingInterval
+            -boolean clickViaJs
+        }
+    }
+
+    namespace DriverLayer {
+        class DriverManager {
+            -ThreadLocal DRIVER
+            -ThreadLocal CONFIGURATION
+            +start(configuration)
+            +getDriver() WebDriver
+            +getConfiguration() Configuration
+            +quit()
+        }
+        class DriverFactoryProvider {
+            +getFactory(configuration) DriverFactory
+        }
+        class DriverFactory {
+            <<interface>>
+            +getPlatform() String
+            +create(configuration) WebDriver
+        }
+        class ChromeDriverFactory
+        class FirefoxDriverFactory
+        class EdgeDriverFactory
+        class SafariDriverFactory
+        class RemoteDriverFactory
+    }
+
+    namespace ElementLayer {
+        class BaseElement {
+            <<abstract>>
+            #BaseElement parent
+            #By locator
+            #findElement() WebElement
+            +click()
+            +sendKeys(keys)
+            +clear()
+        }
+        class Element {
+            +Element(locator)
+            +Element(parent, locator)
+            +find(locator) Element
+            +click()
+            +sendKeys(keys)
+            +clear()
+            +getText() String
+            +isPresent() boolean
+            +isDisplayed() boolean
+            +isEnabled() boolean
+            +isDisabled() boolean
+            +isSelected() boolean
+            +waitUntil(condition)
+        }
+    }
+
+    namespace WaitLayer {
+        class ElementCondition {
+            <<interface>>
+            +matches(element) boolean
+            +description() String
+        }
+        class ElementConditions {
+            +present() ElementCondition
+            +visible() ElementCondition
+            +invisible() ElementCondition
+            +enabled() ElementCondition
+            +disabled() ElementCondition
+            +selected() ElementCondition
+            +textContains(text) ElementCondition
+            +textNotEqual(text) ElementCondition
+        }
+        class ElementWait {
+            +ElementWait(element)
+            +ElementWait(element, timeout)
+            +until(condition)
+        }
+        class SeleniumWait {
+            +SeleniumWait(input)
+        }
+        class RetryAction {
+            +retry(action)
+            +retryForValue(action, exceptions)
+        }
+        class PageWait {
+            +waitForPageLoad()
+        }
+    }
+
+    namespace AssertionLayer {
+        class Assertion {
+            -ThreadLocal ASSERTION
+            +start()
+            +assertTrue(condition, message)
+            +assertFalse(condition, message)
+            +assertEquals(actual, expected, message)
+            +assertAll()
+            +clear()
+        }
+        class SoftAssertion {
+            -List errors
+            ~assertTrue(condition, message)
+            ~assertFalse(condition, message)
+            ~assertEquals(actual, expected, message)
+            ~assertAll(message)
+        }
+        class AssertionLifecycle {
+            <<interface>>
+            +afterTest()
+        }
+        class TestNgAssertionListener {
+            +afterInvocation(method, result)
+        }
+    }
+
+    namespace ReportLayer {
+        class ReportManager {
+            +getProvider() ReportProvider
+        }
+        class ReportFactory {
+            +create() ReportProvider
+        }
+        class ReportProvider {
+            <<interface>>
+            +getName() String
+            +startTest(testName)
+            +step(message)
+            +pass(message)
+            +fail(message)
+            +testPassed(message)
+            +testFailed(message)
+            +testSkipped(message)
+            +attach(name, data)
+            +endTest()
+            +finishReport()
+        }
+        class TestReportListener {
+            +onTestStart(result)
+            +onTestSuccess(result)
+            +onTestFailure(result)
+            +onTestSkipped(result)
+            +onFinish(suite)
+        }
+        class AllureReportProvider
+        class ExtentReportProvider
+        class ConsoleReportProvider
+    }
+
     class TestBase {
-        +beforeAll()
-        +afterAll()
-        -Configuration config
+        +setUp()
+        +tearDown()
     }
 
-    class LoginPage {
-        +login(username, password)
-        +enterUsername(username)
-        +enterPassword(password)
-        +clickLogin()
-        +isLoginSuccessful() boolean
-        -Element usernameTextBox
-        -Element passwordTextBox
-        -Element loginButton
-    }
-
-    class BasePage {
-        <<abstract>>
-        +selectCustomer(customer)
-        +selectCustomer(customer, isIndividual)
-    }
-
-    class Element {
-        +Element(locator)
-        +click()
-        +enter(value)
-        +clear()
-        +getText() String
-        +isDisplayed() boolean
-        +waitForExist()
-        +waitForClickable()
-        +select(text)
-    }
-
-    class BaseElement {
-        #String locator
-        #By by
-        #Driver driver
-        #WebElement element
-        +element() WebElement
-        +click()
-        +enter(value)
-        +clear()
-        +getText() String
-        +getAttribute(name) String
-        +isDisplayed() boolean
-        +getValue()
-        +scrollToView()
-    }
-
-    class DriverRunner {
-        <<Facade>>
-        +open(url)
-        +open()
-        +setConfig(config)
-        +closeWindow()
-        +closeWebDriver()
-        +refresh()
-        +title() String
-        +switchTo()
-        +Wait() SeleniumWait
-        +actions() Actions
-        +driver() Driver
-        +config() Configuration
-        +url() String
-        +source() String
-        +clearCookies()
-        +takeScreenShot()
-    }
-
-    class DriverContainer {
-        -Map threadDriver
-        -Map threadConfig
-        +open(url)
-        +open()
-        +setConfig(config)
-        +closeWindow()
-        +closeWebDriver()
-        +refresh()
-        +driver() Driver
-        +config() Configuration
-        +Wait() SeleniumWait
-    }
-
-    class Driver {
-        <<interface>>
-        +config() Configuration
-        +config(config)
-        +platform() PlatformInfo
-        +hasWebDriverStarted() boolean
-        +getWebDriver() WebDriver
-        +getAndCheckWebDriver() WebDriver
-        +create() WebDriver
-        +isAlive() boolean
-        +close()
-        +executeJavaScript()
-        +clearCookies()
-        +getUserAgent() String
-        +source() String
-        +url() String
-        +switchTo()
-        +actions() Actions
-    }
-
-    class LazyDriver {
-        -Configuration config
-        -PlatformInfo platform
-        -WebDriver webDriver
-        -WebDriverFactory factory
-        +LazyDriver(config)
-        +config() Configuration
-        +platform() PlatformInfo
-        +getAndCheckWebDriver() WebDriver
-        +create() WebDriver
-        +getWebDriver() WebDriver
-        +setWebDriver(webDriver)
-        +isAlive() boolean
-        +close()
-    }
-
-    class SeleniumWait {
-        +SeleniumWait(WebDriver, timeout, pollingInterval)
-    }
-
-    class WebDriverFactory {
-        +createWebDriver(config) WebDriver
-    }
-
-    class DriverFactory {
-        <<interface>>
-        +create(config) WebDriver
-    }
-
-    class AbstractDriverFactory {
-        <<abstract>>
-        +createCommonCapabilities(config) MutableCapabilities
-        #transferCapabilitiesFromSystemProperties()
-        #convertToNearestObject(value) Object
-        #isInteger(value) boolean
-        #isBoolean(value) boolean
-    }
-
-    class ChromeDriverFactory {
-        +create(config) WebDriver
-        #createChromeArguments() List
-    }
-
-    class FirefoxDriverFactory {
-        +create(config) WebDriver
-    }
-
-    class EdgeDriverFactory {
-        +create(config) WebDriver
-    }
-
-    class SafariDriverFactory {
-        +create(config) WebDriver
-    }
-
-    class Configuration {
-        -String platform
-        -boolean headless
-        -String remote
-        -String browserSize
-        -boolean startMaximized
-        -String pageLoadStrategy
-        -MutableCapabilities capabilities
-        -String baseUrl
-        -Duration timeout
-        -Duration pollingInterval
-        -boolean clickViaJs
-        +isRemote() boolean
-        +isHeadless() boolean
-        +getCapabilities()
-        +getTimeout() long
-        +getPollingInterval() long
-    }
-
-    class ConfigLoader {
-        +fromJsonFile(file) Configuration
-        +fromPropertyFile(file) Configuration
-        +updateConfiguration(config) Configuration
+    class FluentWait {
+        <<Selenium>>
     }
 
     TestBase --> ConfigLoader : loads
-    TestBase --> Configuration : configures
-    TestBase --> DriverRunner : starts
-
-    LoginPage --|> BasePage
-    BasePage --> Element : uses
-    Element --|> BaseElement
-
-    DriverRunner --> DriverContainer : delegates
-    DriverContainer --> Driver : manages
-    DriverContainer --> SeleniumWait : creates
-
-    LazyDriver ..|> Driver
-    LazyDriver --> WebDriverFactory : uses
-    LazyDriver --> Configuration
-    LazyDriver --> PlatformInfo
-
-    WebDriverFactory --> DriverFactory : selects
-
-    ChromeDriverFactory --|> AbstractDriverFactory
-    FirefoxDriverFactory --|> AbstractDriverFactory
-    EdgeDriverFactory --|> AbstractDriverFactory
-    SafariDriverFactory --|> AbstractDriverFactory
-
-    AbstractDriverFactory ..|> DriverFactory
-    AbstractDriverFactory --> Configuration
-
-    DriverRunner --> SeleniumWait : Wait()
-    BaseElement --> SeleniumWait : uses
-    SeleniumWait --> WebDriver : waits on
-
+    TestBase --> DriverManager : starts and quits
+    TestBase --> ReportManager : gets provider
     ConfigLoader --> Configuration : creates
+
+    DriverManager --> Configuration : stores per thread
+    DriverManager --> DriverFactoryProvider : selects factory
+    DriverFactoryProvider --> DriverFactory : discovers local factories
+    DriverFactoryProvider --> RemoteDriverFactory : selects when remote
+
+    ChromeDriverFactory ..|> DriverFactory
+    FirefoxDriverFactory ..|> DriverFactory
+    EdgeDriverFactory ..|> DriverFactory
+    SafariDriverFactory ..|> DriverFactory
+    RemoteDriverFactory ..|> DriverFactory
+
+    Element --|> BaseElement
+    BaseElement --> BaseElement : nested parent
+    BaseElement --> DriverManager : gets driver
+    Element --> RetryAction : retries operations
+    Element --> ElementWait : waits
+
+    ElementWait --> ElementCondition : evaluates
+    ElementConditions ..> ElementCondition : creates
+    ElementWait --|> SeleniumWait
+    SeleniumWait --|> FluentWait
+    RetryAction --> SeleniumWait : polls
+    PageWait --> SeleniumWait : waits for page load
+
+    TestNgAssertionListener ..|> AssertionLifecycle
+    AssertionLifecycle --> Assertion : verifies and clears
+    Assertion --> SoftAssertion : delegates per thread
+    SoftAssertion --> RetryAction : retries assertions
+    SoftAssertion --> ReportManager : records checkpoints
+
+    TestReportListener --> ReportManager : gets provider
+    ReportManager --> ReportFactory : initializes provider
+    ReportFactory --> ReportProvider : discovers and selects
+
+    AllureReportProvider ..|> ReportProvider
+
+    ExtentReportProvider ..|> ReportProvider
+    ConsoleReportProvider ..|> ReportProvider
 ```
