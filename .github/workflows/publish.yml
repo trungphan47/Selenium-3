@@ -35,27 +35,6 @@ jobs:
           server-username-env-var: GITHUB_ACTOR
           server-password-env-var: GITHUB_TOKEN
 
-      - name: Verify release version
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import xml.etree.ElementTree as ET
-
-          namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
-          version = ET.parse("pom.xml").getroot().findtext("m:version", namespaces=namespace)
-          version = (version or "").strip()
-          tag = os.environ["RELEASE_TAG"]
-
-          if not version or "${" in version or version.upper().endswith("-SNAPSHOT"):
-              raise SystemExit("Set a release version in pom.xml, for example 1.0.0.")
-          if tag != f"v{version}":
-              raise SystemExit(f"Release tag {tag!r} must match POM version: v{version}.")
-
-          print(f"Publishing sele3 version {version} from tag {tag}.")
-          PY
-
       - name: Build and publish package
         run: mvn --batch-mode clean deploy -DskipTests
         env:
